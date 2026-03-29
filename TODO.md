@@ -2,158 +2,188 @@
 
 Last updated: March 29, 2026
 
----
-
-## 🔴 Immediate / Blocking
-
-### 1. Push index.html to GitHub (DEPLOY THE APP)
-The app is built and ready but not yet live because `index.html` hasn't been pushed to the repo.
-
-**Option A — GitHub web UI (no setup needed):**
-1. Go to https://github.com/jugaljugaljugal-personal/home-tracker
-2. Click "Add file" → "Upload files"
-3. Drag in `index.html` from the House hunt folder
-4. Click "Commit changes"
-5. Wait ~60 seconds, then verify at https://jugaljugaljugal-personal.github.io/home-tracker/
-
-**Option B — Claude Code (preferred for ongoing work):**
-```bash
-git clone https://github.com/jugaljugaljugal-personal/home-tracker.git
-cd home-tracker
-cp "[path to House hunt]/index.html" .
-git add index.html CLAUDE.md TODO.md
-git commit -m "Initial deploy: Firebase-backed home search tracker"
-git push origin main
-```
-
-### 2. Verify GitHub Pages is enabled
-- Go to repo Settings → Pages
-- Source: Deploy from branch → `main` → `/ (root)`
-- Confirm URL shows as active
-
-### 3. End-to-end smoke test
-- Open https://jugaljugaljugal-personal.github.io/home-tracker/
-- Enter PIN 1936
-- Confirm: all 31 properties load, stars show correctly, notes show, map renders
-- Test on mobile (iPhone) — confirm mobile card view works
-- Edit a star rating → open on another device → confirm it syncs
+> **How to use this file:**
+> When an item is implemented, move it to the ✅ Completed section at the bottom and update the "Last updated" date above.
+> When Claude Code completes work, it should update this file and push it to GitHub along with index.html.
 
 ---
 
-## 🟡 DevOps Pipeline
+## 🔴 Bug Fixes (should fix soon)
 
-### 4. Set up local git workflow for fast iteration
-Goal: edit `index.html` locally → push → live in 60 seconds.
+### B1. Filters and sorting don't apply to mobile cards
+**Status:** Open
+**Detail:** `applyFilters()` and `sort()` only affect `#tb tbody tr` rows. On mobile the table is hidden and cards are shown, but card visibility and order are never updated when filters or sort are changed. Mobile users effectively can't filter or sort.
+**Fix:** In `applyFilters()`, also show/hide `.m-card` elements based on the same criteria. In `sort()`, also reorder `.m-card` elements inside `#cards-wrap`.
 
-```bash
-# One-time setup
-git clone https://github.com/jugaljugaljugal-personal/home-tracker.git ~/home-tracker
-cd ~/home-tracker
+### B2. Tour modal address-parsing bug
+**Status:** Needs verification
+**Detail:** The `toggleCheck()` function may call `parseInt()` on an address string to get the property ID (returns NaN). If confirmed, checklist saves silently fail.
+**Fix:** Store the property `n` in a `data-n` attribute on the modal root or a hidden element, and read from that instead.
 
-# Daily workflow
-# Edit index.html (or let Claude Code do it)
-git add index.html
-git commit -m "Fix: [describe]"
-git push origin main
-```
+### B3. `clearScore()` has no confirmation dialog
+**Status:** Open
+**Detail:** `clearChecklist()` shows a `confirm()` before wiping data. `clearScore()` does not — one tap immediately wipes all scoring data for a property.
+**Fix:** Add `if (!confirm('Clear all scores for this property?')) return;` to `clearScore()`.
 
-**With Claude Code**, from inside `~/home-tracker`:
-```
-claude
-> Update property #5 price to $950K and mark it Contingent
-```
-Claude Code can edit the file and push directly.
+---
 
-### 5. Set up GitHub Personal Access Token (for automated tasks)
-The Cowork scheduled tasks need to push to GitHub. They currently can't because the sandbox proxy blocks `api.github.com`.
+## 🟡 Quick Wins
 
+### Q1. Search / text filter bar
+**Status:** Open
+**Detail:** No way to search properties by address, neighborhood, or notes. With 31+ properties, scrolling to find one is tedious.
+**Implementation:** Add a text `<input>` to the filter bar. On `input` event, filter table rows and mobile cards where `addr`, `hood`, or `notes` contains the search string (case-insensitive).
+
+### Q2. Save feedback toast
+**Status:** Open
+**Detail:** Notes, stars, scores, and dates save silently. There's no visual confirmation that a save succeeded, and Firebase errors are only logged to the console.
+**Implementation:** Add a small toast element (fixed bottom-right). Show "Saved ✓" for 1.5s on successful Firebase writes. Show "Save failed ✗" in red on error.
+
+### Q3. Empty state message when filters match nothing
+**Status:** Open
+**Detail:** If filters exclude all properties, the table and card list go completely blank with no explanation.
+**Implementation:** After `applyFilters()`, check if zero rows/cards are visible. If so, show a "No properties match your filters" message inside the table body and cards container.
+
+### Q4. Escape key closes modals
+**Status:** Open
+**Detail:** Modals (tour, score) can only be closed via the ✕ button or clicking the overlay. No keyboard shortcut.
+**Implementation:** Add a `keydown` listener on `document` for `Escape` that calls the active modal's close function.
+
+### Q5. Sort controls on mobile
+**Status:** Open
+**Detail:** The sortable column headers only exist in the desktop table. Mobile users have no way to sort cards by price, rank, score, or walk time.
+**Implementation:** Add a compact sort bar above the mobile cards (shown only on mobile) with a dropdown or pill buttons: Price ↑↓, Walk, Rank, Score.
+
+### Q6. "Last updated" timestamp in header
+**Status:** Open
+**Detail:** No indication of when the scheduled tasks last ran or when data was last refreshed.
+**Implementation:** Scheduled tasks write current timestamp to Firebase at `/config/lastUpdated` after each run. App reads this on load and displays "Last updated: 2h ago" in the header stats bar.
+
+---
+
+## 🟢 High-Value Features
+
+### F1. "Toured" toggle per property
+**Status:** Open
+**Detail:** No way to distinguish properties you've physically visited from ones you've only researched online.
+**Implementation:**
+- Add a `toured` boolean per property in Firebase at `/tracker/toured/{n}`
+- Show a 🏠 toggle button on each table row and mobile card
+- Add a "Toured" filter option in the filter bar
+- Stats bar shows "X Toured" count
+
+### F2. Price history tracking
+**Status:** Open
+**Detail:** When a price changes, you lose the old price. Would be valuable to see "was $950K → $875K" without digging through notes.
+**Implementation:**
+- Scheduled status-check task writes to Firebase: `/tracker/priceHistory/{n}/{timestamp}` → `{ old: 950000, new: 875000 }`
+- App reads price history and shows a small badge on listings with changes: "📉 was $950K"
+- Clicking the badge shows full price history timeline
+
+### F3. Email notifications on price drops / status changes
+**Status:** Open
+**Detail:** Currently you only find out about changes when you open the app. Changes happen every 8 hours.
+**Implementation:**
+- After the status-check task detects changes, send a summary email to jugaljugaljugal@gmail.com via Gmail MCP
+- Email format: subject "Home Tracker: 2 changes detected 3/29", body lists each change with property address, what changed, Redfin link
+
+### F4. Property comparison view
+**Status:** Open
+**Detail:** Hard to compare top candidates side-by-side. Currently requires switching between cards/rows.
+**Implementation:**
+- Add a checkbox to each property row and mobile card
+- "Compare (X)" button appears when 2–3 are selected
+- Opens a full-screen modal with a side-by-side grid showing all stats, scores, walk time, notes, links
+- X-out removes a property from comparison
+
+### F5. Kevin's notes as editable Firebase field
+**Status:** Open
+**Detail:** Kevin's commentary is currently either baked into L_DATA `notes` (requires a code push to update) or in the static Kevin section (disconnected from individual properties).
+**Implementation:**
+- Add `/tracker/kevinNotes/{n}` to Firebase
+- Show a "Kevin" field on each property card/row, editable from the UI (separate from Jugal's personal notes)
+- Kevin section at the bottom can pull from Firebase instead of being hardcoded
+- No code deploy needed to update Kevin's input
+
+### F6. Archive / hide sold and off-market properties
+**Status:** Open
+**Detail:** Properties with `st: SOLD` or off-market status clutter the active list but shouldn't be deleted (preserves history).
+**Implementation:**
+- Add "Hide archived" toggle (default ON) to the filter bar
+- Properties with `st: SOLD` and `cr: NO` are hidden when toggle is ON
+- Toggle OFF to show full history
+
+---
+
+## 🔵 Polish & Quality of Life
+
+### P1. Dark mode
+**Status:** Open
+**Detail:** Often checked at night on mobile. No dark mode support.
+**Implementation:** Add CSS variables for dark theme. Toggle via button in header (moon/sun icon). Persist preference in `localStorage`. Also respect `prefers-color-scheme: dark` media query.
+
+### P2. Score weight auto-normalize
+**Status:** Open
+**Detail:** The score modal shows a red warning if category weights don't sum to 100 but still allows saving, which produces incorrect weighted scores.
+**Implementation:** Add an "Auto-normalize" button that proportionally adjusts weights to sum to 100. Or: auto-normalize silently on save.
+
+### P3. Neighborhood grouping view
+**Status:** Open
+**Detail:** No way to quickly see all West Town properties vs. all West Loop properties together.
+**Implementation:** Add a "Group by neighborhood" toggle above the table/cards. When active, insert neighborhood header rows between groups of properties sorted by `hood`.
+
+### P4. Export to PDF / shareable summary
+**Status:** Open
+**Detail:** For discussions with Kevin or Janki, a clean one-pager of top-ranked properties would be useful.
+**Implementation:** "Export" button generates a print-optimized or PDF view of the top-starred/scored properties with address, price, score, notes, and Redfin link.
+
+### P5. Accessibility improvements
+**Status:** Open
+**Detail:** Several accessibility gaps identified in code review.
+**Specific items:**
+- Add `role="dialog"` and `aria-modal="true"` to tour and score modals
+- Add `aria-label` to star rating buttons
+- Add `aria-expanded` to filter dropdowns
+- Ensure Escape key closes modals (see Q4)
+- Check color contrast on yellow/green badges
+
+### P6. Rotate GitHub PAT
+**Status:** Open
+**Detail:** The GitHub Personal Access Token used by the scheduled tasks was exposed in chat and should be considered compromised.
 **Steps:**
-1. Go to https://github.com/settings/tokens → "Generate new token (classic)"
-2. Scopes: `repo` (full control of private repositories)
-3. Set expiration to 1 year
-4. Save the token securely (1Password, etc.)
-5. Update the Cowork scheduled tasks to use:
-   ```
-   git remote set-url origin https://[TOKEN]@github.com/jugaljugaljugal-personal/home-tracker.git
-   ```
-   Or configure as a repo secret if using GitHub Actions.
+1. Go to https://github.com/settings/tokens
+2. Revoke the current token
+3. Generate a new token with `repo` scope, 1-year expiry
+4. Update both scheduled tasks (`home-search-status-check`, `home-search-email-scan`) via the Cowork sidebar with the new token in the clone URL
 
-### 6. Add GitHub Actions CI/CD (optional but nice)
-For validation before deploy:
+---
 
+## 🔵 DevOps / Infrastructure
+
+### D1. GitHub Actions validation on push
+**Status:** Open
+**Detail:** No automated check that L_DATA is valid JavaScript before deploying.
+**Implementation:**
 ```yaml
 # .github/workflows/validate.yml
-name: Validate HTML
+name: Validate
 on: [push]
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Check HTML validity
+      - name: Validate L_DATA
         run: |
-          # Ensure L_DATA is valid JS, no syntax errors
           node -e "eval(require('fs').readFileSync('index.html','utf8').match(/const L_DATA = \[[\s\S]*?\];/)[0])"
-          echo "L_DATA validates OK"
-```
-
-### 7. Update Cowork scheduled tasks for git push workflow
-Both tasks (`home-search-email-scan`, `home-search-status-check`) need updating:
-- Current approach: edit the local iCloud HTML file (now deprecated)
-- New approach: clone repo → edit L_DATA in index.html → commit → push
-- Requires GitHub PAT (see task #5 above)
-- Ask Claude Code or Cowork to update the task definitions once PAT is set up
-
----
-
-## 🟢 Feature Improvements
-
-### 8. Add "Last Updated" timestamp to header
-Show when the data was last refreshed by the scheduled tasks. Store update timestamp in Firebase at `/config/lastUpdated`.
-
-### 9. Price history tracking
-When a price change is detected by the status-check task, append to a history array in Firebase:
-```
-/tracker/priceHistory/[n]/[timestamp] → { old: 950, new: 875 }
-```
-Display as a small "📉 was $950K" badge on the listing.
-
-### 10. Email/push notification on price drops or status changes
-When the status-check task detects a change, send an email summary to jugaljugaljugal@gmail.com (via Gmail MCP).
-
-### 11. "Toured" flag per property
-Add a toggle per property (saved in Firebase) to mark properties that have been physically toured. Use a 🏠 icon. Filter by toured/not-toured.
-
-### 12. Kevin's latest notes sync
-Allow a quick way to add/update Kevin's notes from mobile (currently requires editing L_DATA and pushing). Consider a dedicated "Kevin notes" field in Firebase (separate from user notes in `/tracker/notes/`) that doesn't require a code deploy.
-
-### 13. Comparison view
-Select 2–3 properties and show them side-by-side with all stats, scores, and notes.
-
-### 14. Export to PDF / share summary
-Generate a shareable PDF summary of top-ranked properties (for discussion with Kevin or Janki).
-
----
-
-## 🔵 Maintenance
-
-### 15. Archive/hide sold/withdrawn properties
-Add a toggle to hide properties that are Sold or Off Market, rather than deleting them from L_DATA (preserves history).
-
-### 16. Migrate CLAUDE.md and TODO.md into the GitHub repo
-Once index.html is pushed, also push CLAUDE.md and TODO.md so Claude Code can read them when working from the cloned repo.
-
-```bash
-git add CLAUDE.md TODO.md
-git commit -m "Add project docs for Claude Code"
-git push origin main
+          echo "L_DATA OK"
 ```
 
 ---
 
 ## ✅ Completed
 
-- [x] Built full Firebase-backed single-file web app (index.html, 1445 lines)
+- [x] Built full Firebase-backed single-file web app (index.html)
 - [x] Replaced localStorage with Firebase Realtime Database
 - [x] PIN gate with SHA-256 hashing (PIN: 1936)
 - [x] All 31 properties in L_DATA with lat/lng, Redfin/Zillow links, notes
@@ -164,3 +194,10 @@ git push origin main
 - [x] Created GitHub repo `jugaljugaljugal-personal/home-tracker`
 - [x] Migrated localStorage data (notes, star ratings) to Firebase via migrate.html
 - [x] CLAUDE.md written for Claude Code context
+- [x] index.html, CLAUDE.md, TODO.md pushed to GitHub repo — app live at https://jugaljugaljugal-personal.github.io/home-tracker/
+- [x] GitHub Pages confirmed serving from main branch root
+- [x] Redfin links added for 20 of 31 properties (3 not indexed on Redfin individually; 8 already had links)
+- [x] Redfin/Zillow link buttons added to desktop table rows and mobile cards
+- [x] Scheduled tasks created and updated for GitHub-based push workflow:
+  - `home-search-status-check` — every 8 hours
+  - `home-search-email-scan` — every 6 hours

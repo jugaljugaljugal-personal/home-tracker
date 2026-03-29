@@ -389,8 +389,8 @@
           <th onclick="sort('dom')" class="c">DOM<span class="sa">▼</span></th>
           <th onclick="sort('listed')" class="c">Listed<span class="sa">▼</span></th>
           <th onclick="sort('wt')" class="c">Walk<span class="sa">▼</span></th>
-          <th class="rank-col">Rank<span class="sa">▼</span></th>
-          <th class="c">Score<span class="sa">▼</span></th>
+          <th class="rank-col" onclick="sort('rank')" style="cursor:pointer">Rank<span class="sa">▼</span></th>
+          <th class="c" onclick="sort('score')" style="cursor:pointer">Score<span class="sa">▼</span></th>
           <th class="c">Tour<span class="sa">▼</span></th>
           <th class="c">Tour'd</th>
           <th>Links</th>
@@ -1111,8 +1111,10 @@ function render() {
 // FILTERS & SORT
 let sortCol = 'n', sortAsc = true;
 function sort(col) {
+  // rank/score sort descending by default (highest first)
+  const defaultDesc = ['rank', 'score'];
   if (sortCol === col) sortAsc = !sortAsc;
-  else { sortCol = col; sortAsc = true; }
+  else { sortCol = col; sortAsc = !defaultDesc.includes(col); }
 
   document.querySelectorAll('thead th').forEach(th => th.classList.remove('sorted'));
   const th = [...document.querySelectorAll('thead th')].find(t => t.textContent.includes(col === 'n' ? '#' : col === 'addr' ? 'Address' : col === 'hood' ? 'Hood' : col === 'price' ? 'Price' : col === 'beds' ? 'BR' : col === 'status' ? 'Status' : col === 'dom' ? 'DOM' : col === 'listed' ? 'Listed' : col === 'wt' ? 'Walk' : ''));

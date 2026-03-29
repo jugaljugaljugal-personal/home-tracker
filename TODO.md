@@ -1,6 +1,6 @@
 # Home Search Tracker — Backlog & TODO
 
-Last updated: March 29, 2026 — Batch 1 complete
+Last updated: March 29, 2026 — Batch 2 complete
 
 > **How to use this file:**
 > When an item is implemented, move it to the ✅ Completed section at the bottom and update the "Last updated" date above.
@@ -64,7 +64,7 @@ Last updated: March 29, 2026 — Batch 1 complete
 ## 🟢 High-Value Features
 
 ### F1. "Toured" toggle per property
-**Status:** Open
+**Status:** ✅ Completed (Batch 2)
 **Detail:** No way to distinguish properties you've physically visited from ones you've only researched online.
 **Implementation:**
 - Add a `toured` boolean per property in Firebase at `/tracker/toured/{n}`
@@ -73,7 +73,7 @@ Last updated: March 29, 2026 — Batch 1 complete
 - Stats bar shows "X Toured" count
 
 ### F2. Price history tracking
-**Status:** Open
+**Status:** ✅ Completed (Batch 2) — display side complete; scheduled tasks write `/tracker/priceHistory/{n}/{timestamp}` → `{ oldPrice, newPrice }` when changes are detected
 **Detail:** When a price changes, you lose the old price. Would be valuable to see "was $950K → $875K" without digging through notes.
 **Implementation:**
 - Scheduled status-check task writes to Firebase: `/tracker/priceHistory/{n}/{timestamp}` → `{ old: 950000, new: 875000 }`
@@ -106,7 +106,7 @@ Last updated: March 29, 2026 — Batch 1 complete
 - No code deploy needed to update Kevin's input
 
 ### F6. Archive / hide sold and off-market properties
-**Status:** Open
+**Status:** ✅ Completed (Batch 2)
 **Detail:** Properties with `st: SOLD` or off-market status clutter the active list but shouldn't be deleted (preserves history).
 **Implementation:**
 - Add "Hide archived" toggle (default ON) to the filter bar

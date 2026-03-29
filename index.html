@@ -69,6 +69,18 @@
     .cr-no { background: var(--red-light); color: var(--red-dark); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
     .links a { display: inline-block; margin-right: 4px; margin-bottom: 2px; padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 700; text-decoration: none; color: white; }
     .m-card-links { padding: 4px 12px 0; }
+    .search-input { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; min-width: 200px; outline: none; background: white; }
+    .search-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(47,84,150,0.10); }
+    .toast { position: fixed; bottom: 24px; right: 24px; background: #1a7a3a; color: white; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; opacity: 0; transform: translateY(8px); transition: opacity 0.2s, transform 0.2s; pointer-events: none; z-index: 9000; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.error { background: #9c0006; }
+    .mobile-sort-bar { display: none; padding: 8px 12px; gap: 8px; flex-wrap: wrap; align-items: center; background: white; border-bottom: 1px solid var(--border); }
+    .mobile-sort-label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+    .msort-btn { padding: 5px 12px; border: 1px solid var(--border); border-radius: 14px; font-size: 12px; background: white; cursor: pointer; color: var(--text); }
+    .msort-btn.active { background: var(--blue); color: white; border-color: var(--blue); }
+    @media (max-width: 768px) { .mobile-sort-bar { display: flex; } }
+    .empty-state { text-align: center; padding: 32px; color: var(--text-muted); font-size: 14px; }
+    #empty-state-mobile { display: none; padding: 32px 16px; text-align: center; color: var(--text-muted); font-size: 14px; }
     .link-rf { background: #dc3545; }
     .link-zl { background: #006AFF; }
     .notes-cell { font-size: 12px; color: var(--text-muted); max-width: 260px; line-height: 1.4; min-width: 120px; border-radius: 4px; padding: 3px 5px; cursor: text; outline: none; }
@@ -254,6 +266,10 @@
       <div class="stat-val" id="stat-scored">0</div>
       <div class="stat-label">Scored</div>
     </div>
+    <div class="stat">
+      <div class="stat-val" id="stat-updated" style="font-size:13px">—</div>
+      <div class="stat-label">Synced</div>
+    </div>
   </div>
 
   <button class="map-toggle-btn collapsed" onclick="toggleMap()">
@@ -298,6 +314,10 @@
         </div>
       </div>
     </div>
+    <div class="filter-group">
+      <label>Search</label>
+      <input type="text" id="search-input" class="search-input" placeholder="Address or neighborhood…" oninput="applyFilters()">
+    </div>
     <button class="reset-btn" onclick="resetFilters()">Reset Filters</button>
   </div>
 
@@ -325,7 +345,17 @@
     </table>
   </div>
 
+  <div class="mobile-sort-bar" id="mobile-sort-bar">
+    <span class="mobile-sort-label">Sort:</span>
+    <button class="msort-btn active" onclick="mobileSort('price', false, this)">Price ↓</button>
+    <button class="msort-btn" onclick="mobileSort('price', true, this)">Price ↑</button>
+    <button class="msort-btn" onclick="mobileSort('wt', true, this)">Walk</button>
+    <button class="msort-btn" onclick="mobileSort('rank', false, this)">Rank</button>
+    <button class="msort-btn" onclick="mobileSort('score', false, this)">Score</button>
+  </div>
+
   <div class="cards-wrap" id="cards-wrap"></div>
+  <div id="empty-state-mobile">No properties match your filters</div>
 
   <div class="kevin-section">
     <div class="kevin-card">
@@ -392,6 +422,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const trackerRef = db.ref('tracker');
+const configRef  = db.ref('config');
 
 // DATA
 const L_DATA = [
@@ -615,30 +646,41 @@ function loadWeights() {
   return def;
 }
 
+// TOAST NOTIFICATION
+let _toastTimer;
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
 // SAVE FUNCTIONS
 function saveRank(n, v) {
   _cache.ranks[n] = v;
-  trackerRef.child('ranks/' + n).set(v).catch(e => console.error('Save rank failed:', e));
+  trackerRef.child('ranks/' + n).set(v).then(() => showToast('Saved ✓')).catch(e => { console.error('Save rank failed:', e); showToast('Save failed', true); });
 }
 function saveNote(n, v) {
   _cache.notes[n] = v;
-  trackerRef.child('notes/' + n).set(v).catch(e => console.error('Save note failed:', e));
+  trackerRef.child('notes/' + n).set(v).then(() => showToast('Saved ✓')).catch(e => { console.error('Save note failed:', e); showToast('Save failed', true); });
 }
 function saveScores(n, scores) {
   _cache.scores[n] = scores;
-  trackerRef.child('scores/' + n).set(scores).catch(e => console.error('Save scores failed:', e));
+  trackerRef.child('scores/' + n).set(scores).then(() => showToast('Saved ✓')).catch(e => { console.error('Save scores failed:', e); showToast('Save failed', true); });
 }
 function saveChecklist(n, checks) {
   _cache.checklists[n] = checks;
-  trackerRef.child('checklists/' + n).set(checks).catch(e => console.error('Save checklist failed:', e));
+  trackerRef.child('checklists/' + n).set(checks).then(() => showToast('Saved ✓')).catch(e => { console.error('Save checklist failed:', e); showToast('Save failed', true); });
 }
 function saveListed(n, v) {
   _cache.listed[n] = v;
-  trackerRef.child('listed/' + n).set(v).catch(e => console.error('Save listed failed:', e));
+  trackerRef.child('listed/' + n).set(v).then(() => showToast('Saved ✓')).catch(e => { console.error('Save listed failed:', e); showToast('Save failed', true); });
 }
 function saveWeights(w) {
   _cache.weights = w;
-  trackerRef.child('weights').set(w).catch(e => console.error('Save weights failed:', e));
+  trackerRef.child('weights').set(w).then(() => showToast('Saved ✓')).catch(e => { console.error('Save weights failed:', e); showToast('Save failed', true); });
 }
 
 // DYSON LOCATION & WALK TIME
@@ -820,6 +862,18 @@ function sort(col) {
   });
   const tbody = document.querySelector('#tb tbody');
   rows.forEach(r => tbody.appendChild(r));
+
+  // Also sort mobile cards
+  const cards = [...document.querySelectorAll('#cards-wrap .m-card')];
+  cards.sort((a, b) => {
+    let av = a.dataset[col], bv = b.dataset[col];
+    if (!isNaN(av) && !isNaN(bv)) { av = parseFloat(av); bv = parseFloat(bv); }
+    if (av < bv) return sortAsc ? -1 : 1;
+    if (av > bv) return sortAsc ? 1 : -1;
+    return 0;
+  });
+  const wrap = document.getElementById('cards-wrap');
+  cards.forEach(c => wrap.appendChild(c));
 }
 
 function applyFilters() {
@@ -827,17 +881,55 @@ function applyFilters() {
   document.querySelectorAll('#status-dropdown input:checked').forEach(cb => status.push(cb.value));
   const criteria = [];
   document.querySelectorAll('#criteria-dropdown input:checked').forEach(cb => criteria.push(cb.value));
+  const searchVal = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
 
+  // Filter table rows
+  let visibleRows = 0;
   document.querySelectorAll('#tb tbody tr').forEach(tr => {
-    const hasStatus = status.length === 0 || status.includes(tr.dataset.status);
+    if (tr.id === 'empty-state-row') return;
+    const hasStatus   = status.length === 0   || status.includes(tr.dataset.status);
     const hasCriteria = criteria.length === 0 || criteria.includes(tr.dataset.criteria);
-    tr.classList.toggle('hidden', !(hasStatus && hasCriteria));
+    const matchSearch = !searchVal || (tr.dataset.addr || '').toLowerCase().includes(searchVal) || (tr.dataset.hood || '').toLowerCase().includes(searchVal);
+    const visible = hasStatus && hasCriteria && matchSearch;
+    tr.classList.toggle('hidden', !visible);
+    if (visible) visibleRows++;
   });
+
+  // Empty state for table
+  let emptyRow = document.getElementById('empty-state-row');
+  if (visibleRows === 0) {
+    if (!emptyRow) {
+      emptyRow = document.createElement('tr');
+      emptyRow.id = 'empty-state-row';
+      emptyRow.innerHTML = '<td colspan="15" class="empty-state">No properties match your filters</td>';
+      document.querySelector('#tb tbody').appendChild(emptyRow);
+    }
+    emptyRow.style.display = '';
+  } else if (emptyRow) {
+    emptyRow.style.display = 'none';
+  }
+
+  // Filter mobile cards
+  let visibleCards = 0;
+  document.querySelectorAll('#cards-wrap .m-card').forEach(card => {
+    const hasStatus   = status.length === 0   || status.includes(card.dataset.status);
+    const hasCriteria = criteria.length === 0 || criteria.includes(card.dataset.criteria);
+    const matchSearch = !searchVal || (card.dataset.addr || '').toLowerCase().includes(searchVal) || (card.dataset.hood || '').toLowerCase().includes(searchVal);
+    const visible = hasStatus && hasCriteria && matchSearch;
+    card.classList.toggle('hidden', !visible);
+    if (visible) visibleCards++;
+  });
+
+  // Empty state for mobile
+  const emptyM = document.getElementById('empty-state-mobile');
+  if (emptyM) emptyM.style.display = visibleCards === 0 ? 'block' : 'none';
 }
 
 function resetFilters() {
   document.querySelectorAll('.ms-dropdown input').forEach(cb => cb.checked = false);
   document.querySelectorAll('#status-trigger, #criteria-trigger').forEach(btn => btn.textContent = 'All' + (btn.id.includes('status') ? ' Statuses' : ''));
+  const si = document.getElementById('search-input');
+  if (si) si.value = '';
   applyFilters();
 }
 
@@ -866,6 +958,19 @@ function updateMsTrigger(field) {
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.ms-dropdown input').forEach(cb => cb.addEventListener('change', onMsChange));
 });
+
+// MOBILE SORT
+function mobileSort(col, asc, btn) {
+  document.querySelectorAll('.msort-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const cards = [...document.querySelectorAll('#cards-wrap .m-card')];
+  cards.sort((a, b) => {
+    let av = parseFloat(a.dataset[col] ?? 0), bv = parseFloat(b.dataset[col] ?? 0);
+    return asc ? av - bv : bv - av;
+  });
+  const wrap = document.getElementById('cards-wrap');
+  cards.forEach(c => wrap.appendChild(c));
+}
 
 // CALC STATS
 function calcStats() {
@@ -938,6 +1043,7 @@ function openTourModal(n) {
     body.appendChild(pane);
   });
 
+  document.getElementById('tour-modal').dataset.n = n;
   document.getElementById('tour-modal').style.display = 'flex';
 }
 
@@ -965,7 +1071,7 @@ function switchClTab(secId) {
 function toggleCheck(e) {
   const secId = e.target.dataset.sec;
   const item = e.target.dataset.item;
-  const n = parseInt(document.getElementById('tour-modal-addr').textContent);
+  const n = parseInt(document.getElementById('tour-modal').dataset.n);
   const l = L_DATA.find(x => x.n === n);
   if (!l) return;
 
@@ -1017,6 +1123,7 @@ function openScoreModal(n) {
   const body = document.getElementById('score-modal-body');
   body.innerHTML = buildScoreBody(n);
 
+  document.getElementById('score-modal').dataset.n = n;
   document.getElementById('score-modal').style.display = 'flex';
 }
 
@@ -1095,7 +1202,7 @@ function setScore(e, catId, critId, val) {
   e.target.parentElement.querySelectorAll('.score-dot').forEach(d => d.classList.remove('active'));
   e.target.classList.add('active');
 
-  const n = parseInt(document.getElementById('score-modal-addr').textContent);
+  const n = parseInt(document.getElementById('score-modal').dataset.n);
   const l = L_DATA.find(x => x.n === n);
   if (!l) return;
 
@@ -1215,9 +1322,17 @@ function renderMobileCards() {
 
     const card = document.createElement('div');
     card.className = 'm-card';
-    card.dataset.n = l.n;
-    card.dataset.rank = rank;
-    card.dataset.score = score ?? -1;
+    card.dataset.n      = l.n;
+    card.dataset.rank   = rank;
+    card.dataset.score  = score ?? -1;
+    card.dataset.status   = l.st;
+    card.dataset.criteria = l.cr;
+    card.dataset.price    = l.price;
+    card.dataset.beds     = l.beds;
+    card.dataset.wt       = wtMin;
+    card.dataset.dom      = l.listed ? Math.floor((new Date() - new Date(l.listed)) / (1000*60*60*24)) : 999999;
+    card.dataset.addr     = l.addr;
+    card.dataset.hood     = l.hood;
 
     card.innerHTML = `
       <div class="m-card-header">
@@ -1367,6 +1482,17 @@ function setupFirebaseListeners() {
       }
     });
   });
+
+  // Last synced timestamp
+  configRef.child('lastUpdated').on('value', snap => {
+    const ts = snap.val();
+    const el = document.getElementById('stat-updated');
+    if (!el || !ts) return;
+    const mins = Math.round((Date.now() - new Date(ts)) / 60000);
+    if (mins < 60) el.textContent = mins + 'm ago';
+    else if (mins < 1440) el.textContent = Math.round(mins / 60) + 'h ago';
+    else el.textContent = Math.round(mins / 1440) + 'd ago';
+  });
 }
 
 // PIN GATE
@@ -1434,6 +1560,14 @@ async function showTracker() {
   document.querySelectorAll('.ms-dropdown input').forEach(cb => cb.addEventListener('change', onMsChange));
 }
 
+// KEYBOARD SHORTCUTS
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (document.getElementById('tour-modal').style.display  !== 'none') closeTourModal();
+    if (document.getElementById('score-modal').style.display !== 'none') closeScoreModal();
+  }
+});
+
 // INIT
 document.getElementById('pin-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') checkPin();
@@ -1445,5 +1579,7 @@ if (sessionStorage.getItem('hst_authed') === 'true') {
 
 window.addEventListener('resize', initViewMode);
 </script>
+
+<div id="toast" class="toast"></div>
 </body>
 </html>

@@ -1,6 +1,6 @@
 # Home Search Tracker — Backlog & TODO
 
-Last updated: March 29, 2026
+Last updated: March 29, 2026 — Batch 1 complete
 
 > **How to use this file:**
 > When an item is implemented, move it to the ✅ Completed section at the bottom and update the "Last updated" date above.
@@ -11,17 +11,17 @@ Last updated: March 29, 2026
 ## 🔴 Bug Fixes (should fix soon)
 
 ### B1. Filters and sorting don't apply to mobile cards
-**Status:** Open
+**Status:** ✅ Completed (Batch 1)
 **Detail:** `applyFilters()` and `sort()` only affect `#tb tbody tr` rows. On mobile the table is hidden and cards are shown, but card visibility and order are never updated when filters or sort are changed. Mobile users effectively can't filter or sort.
 **Fix:** In `applyFilters()`, also show/hide `.m-card` elements based on the same criteria. In `sort()`, also reorder `.m-card` elements inside `#cards-wrap`.
 
 ### B2. Tour modal address-parsing bug
-**Status:** Needs verification
+**Status:** ✅ Completed (Batch 1)
 **Detail:** The `toggleCheck()` function may call `parseInt()` on an address string to get the property ID (returns NaN). If confirmed, checklist saves silently fail.
 **Fix:** Store the property `n` in a `data-n` attribute on the modal root or a hidden element, and read from that instead.
 
 ### B3. `clearScore()` has no confirmation dialog
-**Status:** Open
+**Status:** ✅ Already fixed — `clearScore()` has `if (!confirm(...)) return;` at line 1133
 **Detail:** `clearChecklist()` shows a `confirm()` before wiping data. `clearScore()` does not — one tap immediately wipes all scoring data for a property.
 **Fix:** Add `if (!confirm('Clear all scores for this property?')) return;` to `clearScore()`.
 
@@ -30,32 +30,32 @@ Last updated: March 29, 2026
 ## 🟡 Quick Wins
 
 ### Q1. Search / text filter bar
-**Status:** Open
+**Status:** ✅ Completed (Batch 1)
 **Detail:** No way to search properties by address, neighborhood, or notes. With 31+ properties, scrolling to find one is tedious.
 **Implementation:** Add a text `<input>` to the filter bar. On `input` event, filter table rows and mobile cards where `addr`, `hood`, or `notes` contains the search string (case-insensitive).
 
 ### Q2. Save feedback toast
-**Status:** Open
+**Status:** ✅ Completed (Batch 1)
 **Detail:** Notes, stars, scores, and dates save silently. There's no visual confirmation that a save succeeded, and Firebase errors are only logged to the console.
 **Implementation:** Add a small toast element (fixed bottom-right). Show "Saved ✓" for 1.5s on successful Firebase writes. Show "Save failed ✗" in red on error.
 
 ### Q3. Empty state message when filters match nothing
-**Status:** Open
+**Status:** ✅ Completed (Batch 1)
 **Detail:** If filters exclude all properties, the table and card list go completely blank with no explanation.
 **Implementation:** After `applyFilters()`, check if zero rows/cards are visible. If so, show a "No properties match your filters" message inside the table body and cards container.
 
 ### Q4. Escape key closes modals
-**Status:** Open
+**Status:** ✅ Completed (Batch 1)
 **Detail:** Modals (tour, score) can only be closed via the ✕ button or clicking the overlay. No keyboard shortcut.
 **Implementation:** Add a `keydown` listener on `document` for `Escape` that calls the active modal's close function.
 
 ### Q5. Sort controls on mobile
-**Status:** Open
+**Status:** ✅ Completed (Batch 1)
 **Detail:** The sortable column headers only exist in the desktop table. Mobile users have no way to sort cards by price, rank, score, or walk time.
 **Implementation:** Add a compact sort bar above the mobile cards (shown only on mobile) with a dropdown or pill buttons: Price ↑↓, Walk, Rank, Score.
 
 ### Q6. "Last updated" timestamp in header
-**Status:** Open
+**Status:** ✅ Completed (Batch 1) — app listens to Firebase `/config/lastUpdated`; scheduled tasks still need updating to write this value (see task prompt updates)
 **Detail:** No indication of when the scheduled tasks last ran or when data was last refreshed.
 **Implementation:** Scheduled tasks write current timestamp to Firebase at `/config/lastUpdated` after each run. App reads this on load and displays "Last updated: 2h ago" in the header stats bar.
 

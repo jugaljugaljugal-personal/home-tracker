@@ -1,6 +1,6 @@
 # Home Search Tracker — Backlog & TODO
 
-Last updated: March 29, 2026 — Batch 5 complete
+Last updated: March 29, 2026 — All batches complete ✅
 
 > **How to use this file:**
 > When an item is implemented, move it to the ✅ Completed section at the bottom and update the "Last updated" date above.
@@ -161,7 +161,7 @@ Last updated: March 29, 2026 — Batch 5 complete
 ## 🔵 DevOps / Infrastructure
 
 ### D1. GitHub Actions validation on push
-**Status:** Open
+**Status:** ✅ Completed (Batch 6) — `.github/workflows/validate.yml` validates L_DATA syntax and required fields on every push
 **Detail:** No automated check that L_DATA is valid JavaScript before deploying.
 **Implementation:**
 ```yaml

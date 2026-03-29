@@ -68,6 +68,7 @@
     .cr-pend { background: #ffe0cc; color: #a84300; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
     .cr-no { background: var(--red-light); color: var(--red-dark); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
     .links a { display: inline-block; margin-right: 4px; margin-bottom: 2px; padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 700; text-decoration: none; color: white; }
+    .m-card-links { padding: 4px 12px 0; }
     .link-rf { background: #dc3545; }
     .link-zl { background: #006AFF; }
     .notes-cell { font-size: 12px; color: var(--text-muted); max-width: 260px; line-height: 1.4; min-width: 120px; border-radius: 4px; padding: 3px 5px; cursor: text; outline: none; }
@@ -316,6 +317,7 @@
           <th class="rank-col">Rank<span class="sa">▼</span></th>
           <th class="c">Score<span class="sa">▼</span></th>
           <th class="c">Tour<span class="sa">▼</span></th>
+          <th>Links</th>
           <th>Notes<span class="sa">▼</span></th>
         </tr>
       </thead>
@@ -791,6 +793,7 @@ function render() {
       <td class="rank-col">${starHtml(l.n)}</td>
       <td id="score-cell-${l.n}" class="c">${scoreBadgeHtml(l.n)}</td>
       <td id="cl-cell-${l.n}" class="c">${clProgressHtml(l.n)}</td>
+      <td>${lnkHtml(l)}</td>
       <td><div class="notes-cell" data-n="${l.n}" contenteditable="true" onblur="saveNoteFromEl(event)">${escHtml(loadNote(l.n))}</div></td>
     `;
     tb.appendChild(tr);
@@ -1240,6 +1243,7 @@ function renderMobileCards() {
         <div id="m-score-cell-${l.n}" class="c">${scoreBadgeHtml(l.n)}</div>
         <div id="m-cl-cell-${l.n}" class="c">${clProgressHtml(l.n)}</div>
       </div>
+      <div class="m-card-links">${lnkHtml(l)}</div>
       <div class="m-card-notes">
         <div class="m-notes-label">Notes</div>
         <div class="m-notes-cell" data-n="${l.n}" contenteditable="true" onblur="saveNoteFromEl(event)">${escHtml(loadNote(l.n))}</div>

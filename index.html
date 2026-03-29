@@ -116,6 +116,10 @@
     .listed-input { border: 1px solid transparent; border-radius: 4px; padding: 2px 4px; font-size: 11px; color: var(--text-muted); background: transparent; cursor: pointer; width: 104px; font-family: inherit; }
     .listed-input:hover { border-color: var(--border); background: white; }
     .listed-input:focus { border-color: var(--blue); outline: none; box-shadow: 0 0 0 2px rgba(47,84,150,0.15); color: var(--text); background: white; }
+    .kevin-note-cell { color: var(--blue); font-size: 12px; }
+    .m-kevin-cell { font-size: 13px; color: var(--blue); line-height: 1.4; min-height: 20px; outline: none; border-radius: 4px; padding: 2px 4px; }
+    .m-kevin-cell:focus { background: #f5f8ff; box-shadow: 0 0 0 2px rgba(47,84,150,0.12); }
+    .m-kevin-cell:empty:before { content: "Add Kevin's notes…"; color: var(--text-muted); font-style: italic; }
     .kevin-section { padding: 0 32px 32px; }
     .kevin-card { background: white; border-radius: 10px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
     .kevin-card h2 { font-size: 18px; color: var(--blue); margin-bottom: 16px; }
@@ -349,6 +353,7 @@
           <th class="c">Tour'd</th>
           <th>Links</th>
           <th>Notes<span class="sa">▼</span></th>
+          <th style="color:var(--blue)">Kevin</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -638,7 +643,8 @@ const _cache = {
   listed: {},
   weights: null,
   toured: {},
-  priceHistory: {}
+  priceHistory: {},
+  kevinNotes: {}
 };
 
 // LOAD FUNCTIONS
@@ -719,6 +725,19 @@ function priceHistoryBadge(n) {
   const diff  = (last.newPrice || 0) - (last.oldPrice || 0);
   const arrow = diff < 0 ? '📉' : '📈';
   return `<span class="price-hist" title="Was ${fmt(last.oldPrice)}">${arrow} was ${fmt(last.oldPrice)}</span>`;
+}
+
+// KEVIN NOTES
+function loadKevinNote(n) { return _cache.kevinNotes[n] !== undefined ? _cache.kevinNotes[n] : ''; }
+function saveKevinNote(n, v) {
+  _cache.kevinNotes[n] = v;
+  trackerRef.child('kevinNotes/' + n).set(v).then(() => showToast('Saved ✓')).catch(e => { console.error(e); showToast('Save failed', true); });
+}
+function saveKevinNoteFromEl(event) {
+  const el = event.target;
+  const n = parseInt(el.dataset.n);
+  if (isNaN(n)) return;
+  saveKevinNote(n, el.textContent);
 }
 
 // ARCHIVE TOGGLE
@@ -886,6 +905,7 @@ function render() {
       <td class="c"><span class="toured-btn${loadToured(l.n) ? ' active' : ''}" data-n="${l.n}" onclick="toggleToured(${l.n})" title="Mark as toured">🏠</span></td>
       <td>${lnkHtml(l)}</td>
       <td><div class="notes-cell" data-n="${l.n}" contenteditable="true" onblur="saveNoteFromEl(event)">${escHtml(loadNote(l.n))}</div></td>
+      <td><div class="notes-cell kevin-note-cell" data-n="${l.n}" contenteditable="true" onblur="saveKevinNoteFromEl(event)">${escHtml(loadKevinNote(l.n))}</div></td>
     `;
     tb.appendChild(tr);
   });
@@ -1412,6 +1432,10 @@ function renderMobileCards() {
         <div class="m-notes-label">Notes</div>
         <div class="m-notes-cell" data-n="${l.n}" contenteditable="true" onblur="saveNoteFromEl(event)">${escHtml(loadNote(l.n))}</div>
       </div>
+      <div class="m-card-notes" style="padding-top:0">
+        <div class="m-notes-label" style="color:var(--blue)">Kevin</div>
+        <div class="m-kevin-cell" data-n="${l.n}" contenteditable="true" onblur="saveKevinNoteFromEl(event)">${escHtml(loadKevinNote(l.n))}</div>
+      </div>
     `;
     wrap.appendChild(card);
   });
@@ -1546,6 +1570,18 @@ function setupFirebaseListeners() {
     calcStats();
   });
 
+  trackerRef.child('kevinNotes').on('value', snap => {
+    _cache.kevinNotes = snap.val() || {};
+    L_DATA.forEach(l => {
+      const note = _cache.kevinNotes[l.n];
+      if (note === undefined) return;
+      const cells = document.querySelectorAll(`.m-kevin-cell[data-n="${l.n}"]`);
+      cells.forEach(cell => { if (document.activeElement !== cell) cell.textContent = note; });
+      const tblCells = document.querySelectorAll(`#tb .kevin-note-cell[data-n="${l.n}"]`);
+      tblCells.forEach(cell => { if (document.activeElement !== cell) cell.textContent = note; });
+    });
+  });
+
   trackerRef.child('priceHistory').on('value', snap => {
     _cache.priceHistory = snap.val() || {};
     L_DATA.forEach(l => {
@@ -1619,6 +1655,7 @@ async function showTracker() {
     _cache.weights = data.weights || null;
     _cache.toured = data.toured || {};
     _cache.priceHistory = data.priceHistory || {};
+    _cache.kevinNotes = data.kevinNotes || {};
   } catch (e) {
     console.warn('Firebase load failed:', e);
   }

@@ -1,6 +1,6 @@
 # Home Search Tracker — Backlog & TODO
 
-Last updated: March 29, 2026 — Batch 2 complete
+Last updated: March 29, 2026 — Batch 3 complete
 
 > **How to use this file:**
 > When an item is implemented, move it to the ✅ Completed section at the bottom and update the "Last updated" date above.
@@ -81,7 +81,7 @@ Last updated: March 29, 2026 — Batch 2 complete
 - Clicking the badge shows full price history timeline
 
 ### F3. Email notifications on price drops / status changes
-**Status:** Open
+**Status:** ✅ Completed (Batch 3) — `home-search-status-check` task now sends a Gmail notification after each run where changes are detected
 **Detail:** Currently you only find out about changes when you open the app. Changes happen every 8 hours.
 **Implementation:**
 - After the status-check task detects changes, send a summary email to jugaljugaljugal@gmail.com via Gmail MCP
@@ -97,7 +97,7 @@ Last updated: March 29, 2026 — Batch 2 complete
 - X-out removes a property from comparison
 
 ### F5. Kevin's notes as editable Firebase field
-**Status:** Open
+**Status:** ✅ Completed (Batch 3)
 **Detail:** Kevin's commentary is currently either baked into L_DATA `notes` (requires a code push to update) or in the static Kevin section (disconnected from individual properties).
 **Implementation:**
 - Add `/tracker/kevinNotes/{n}` to Firebase

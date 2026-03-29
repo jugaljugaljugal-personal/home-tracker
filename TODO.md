@@ -1,6 +1,6 @@
 # Home Search Tracker — Backlog & TODO
 
-Last updated: March 29, 2026 — Batch 3 complete
+Last updated: March 29, 2026 — Batch 4 complete
 
 > **How to use this file:**
 > When an item is implemented, move it to the ✅ Completed section at the bottom and update the "Last updated" date above.
@@ -88,7 +88,7 @@ Last updated: March 29, 2026 — Batch 3 complete
 - Email format: subject "Home Tracker: 2 changes detected 3/29", body lists each change with property address, what changed, Redfin link
 
 ### F4. Property comparison view
-**Status:** Open
+**Status:** ✅ Completed (Batch 4)
 **Detail:** Hard to compare top candidates side-by-side. Currently requires switching between cards/rows.
 **Implementation:**
 - Add a checkbox to each property row and mobile card

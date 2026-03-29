@@ -117,6 +117,25 @@
     .listed-input:hover { border-color: var(--border); background: white; }
     .listed-input:focus { border-color: var(--blue); outline: none; box-shadow: 0 0 0 2px rgba(47,84,150,0.15); color: var(--text); background: white; }
     .kevin-note-cell { color: var(--blue); font-size: 12px; }
+    /* COMPARE */
+    .compare-cb-wrap { display: flex; align-items: center; justify-content: center; }
+    .compare-cb { width: 16px; height: 16px; cursor: pointer; accent-color: var(--blue); }
+    .compare-bar { display: none; align-items: center; gap: 10px; padding: 8px 20px; background: var(--blue); color: white; border-radius: 8px; margin: 0 32px 8px; font-size: 13px; font-weight: 600; }
+    .compare-bar.show { display: flex; }
+    .compare-bar-btn { background: white; color: var(--blue); border: none; padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .compare-bar-clear { background: transparent; color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.4); padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-left: auto; }
+    #compare-modal .modal-box { max-width: 95vw; width: auto; max-height: 90vh; overflow-y: auto; }
+    .compare-grid { display: grid; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; font-size: 13px; }
+    .compare-row { display: contents; }
+    .compare-row > div { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; }
+    .compare-row:last-child > div { border-bottom: none; }
+    .compare-row:nth-child(even) > div { background: #fafafa; }
+    .compare-row > div:first-child { font-weight: 600; color: var(--text-muted); font-size: 12px; white-space: nowrap; background: #f5f5f5 !important; border-right: 1px solid var(--border); }
+    .compare-addr { font-weight: 700; color: var(--blue); font-size: 14px; line-height: 1.3; }
+    .compare-remove { float: right; background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; line-height: 1; margin-left: 8px; }
+    .compare-notes { font-size: 12px; color: var(--text-muted); max-width: 200px; line-height: 1.4; }
+    .m-compare-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); padding: 4px 0; }
+    @media (max-width: 768px) { .compare-bar { margin: 0 12px 8px; } }
     .m-kevin-cell { font-size: 13px; color: var(--blue); line-height: 1.4; min-height: 20px; outline: none; border-radius: 4px; padding: 2px 4px; }
     .m-kevin-cell:focus { background: #f5f8ff; box-shadow: 0 0 0 2px rgba(47,84,150,0.12); }
     .m-kevin-cell:empty:before { content: "Add Kevin's notes…"; color: var(--text-muted); font-style: italic; }
@@ -334,10 +353,18 @@
     <button class="reset-btn" onclick="resetFilters()">Reset Filters</button>
   </div>
 
+  <!-- COMPARE BAR -->
+  <div class="compare-bar" id="compare-bar">
+    <span id="compare-bar-label">Compare 0 properties</span>
+    <button class="compare-bar-btn" onclick="openCompareModal()">Compare →</button>
+    <button class="compare-bar-clear" onclick="clearCompare()">Clear</button>
+  </div>
+
   <div class="table-wrap">
     <table id="tb">
       <thead>
         <tr>
+          <th class="c" title="Select to compare">±</th>
           <th onclick="sort('n')">#<span class="sa">▼</span></th>
           <th onclick="sort('addr')">Address<span class="sa">▼</span></th>
           <th onclick="sort('hood')">Hood<span class="sa">▼</span></th>
@@ -385,6 +412,17 @@
   </div>
 
   <div class="footer">Generated March 28, 2026 • Sources: Kevin Patel / connectMLS + Redfin email alerts</div>
+
+  <!-- COMPARE MODAL -->
+  <div id="compare-modal" class="modal-overlay" style="display:none" onclick="closeCompareModal(event)" role="dialog" aria-modal="true">
+    <div class="modal-box" onclick="event.stopPropagation()" style="padding:0">
+      <div class="modal-header">
+        <h2>Compare Properties</h2>
+        <button class="modal-close" onclick="closeCompareModal()">×</button>
+      </div>
+      <div id="compare-modal-body" style="padding:20px;overflow-x:auto"></div>
+    </div>
+  </div>
 
   <!-- TOUR MODAL -->
   <div id="tour-modal" class="modal-overlay" style="display:none" onclick="closeTourModal(event)">
@@ -740,6 +778,95 @@ function saveKevinNoteFromEl(event) {
   saveKevinNote(n, el.textContent);
 }
 
+// COMPARE
+const _compareSet = new Set();
+function toggleCompare(n) {
+  if (_compareSet.has(n)) {
+    _compareSet.delete(n);
+  } else if (_compareSet.size < 3) {
+    _compareSet.add(n);
+  } else {
+    showToast('Max 3 properties to compare', true);
+    // uncheck the box
+    document.querySelectorAll(`.compare-cb[data-n="${n}"]`).forEach(cb => cb.checked = false);
+    return;
+  }
+  updateCompareBtn();
+}
+function updateCompareBtn() {
+  const bar = document.getElementById('compare-bar');
+  const label = document.getElementById('compare-bar-label');
+  const count = _compareSet.size;
+  if (count >= 2) {
+    bar.classList.add('show');
+    label.textContent = `Compare ${count} propert${count === 1 ? 'y' : 'ies'}`;
+  } else {
+    bar.classList.remove('show');
+  }
+}
+function clearCompare() {
+  _compareSet.clear();
+  document.querySelectorAll('.compare-cb').forEach(cb => cb.checked = false);
+  updateCompareBtn();
+}
+function openCompareModal() {
+  document.getElementById('compare-modal-body').innerHTML = buildCompareHtml();
+  document.getElementById('compare-modal').style.display = 'flex';
+}
+function closeCompareModal(e) {
+  if (e && e.target.id !== 'compare-modal') return;
+  document.getElementById('compare-modal').style.display = 'none';
+}
+function removeFromCompare(n) {
+  _compareSet.delete(n);
+  document.querySelectorAll(`.compare-cb[data-n="${n}"]`).forEach(cb => cb.checked = false);
+  if (_compareSet.size < 2) {
+    document.getElementById('compare-modal').style.display = 'none';
+    updateCompareBtn();
+  } else {
+    document.getElementById('compare-modal-body').innerHTML = buildCompareHtml();
+    updateCompareBtn();
+  }
+}
+function buildCompareHtml() {
+  const ns = [..._compareSet];
+  const props = ns.map(n => L_DATA.find(l => l.n === n)).filter(Boolean);
+  const cols = props.length + 1; // +1 for label column
+  let h = `<div class="compare-grid" style="grid-template-columns: 100px repeat(${props.length}, minmax(180px, 1fr))">`;
+
+  function row(label, vals) {
+    h += '<div class="compare-row">';
+    h += `<div>${label}</div>`;
+    vals.forEach(v => h += `<div>${v}</div>`);
+    h += '</div>';
+  }
+
+  // Header row — address + remove button
+  h += '<div class="compare-row">';
+  h += '<div></div>';
+  props.forEach(l => {
+    h += `<div><span class="compare-addr">${escHtml(l.addr)}</span><button class="compare-remove" onclick="removeFromCompare(${l.n})" title="Remove">×</button><div style="font-size:11px;color:var(--text-muted)">${escHtml(l.hood)}</div></div>`;
+  });
+  h += '</div>';
+
+  row('Price', props.map(l => `<strong>${fmt(l.price)}</strong>${priceHistoryBadge(l.n)}`));
+  row('Status', props.map(l => sBadge(l.st)));
+  row('Interest', props.map(l => cBadge(l.cr)));
+  row('Beds / Baths', props.map(l => `${l.beds} bd / ${l.baths} ba`));
+  row('Sqft', props.map(l => l.sqft ? l.sqft.toLocaleString() + ' sqft' : '—'));
+  row('Type', props.map(l => l.type));
+  row('Walk to Dyson', props.map(l => wtBadge(walkMin(l.lat, l.lon))));
+  row('Rank', props.map(l => `<span class="stars" style="pointer-events:none">${starHtml(l.n)}</span>`));
+  row('Score', props.map(l => scoreBadgeHtml(l.n)));
+  row('Toured', props.map(l => loadToured(l.n) ? '🏠 Yes' : '—'));
+  row('Links', props.map(l => lnkHtml(l)));
+  row('Notes', props.map(l => `<div class="compare-notes">${escHtml(loadNote(l.n)) || '<em style="color:var(--text-muted)">None</em>'}</div>`));
+  row('Kevin', props.map(l => `<div class="compare-notes" style="color:var(--blue)">${escHtml(loadKevinNote(l.n)) || '<em style="color:var(--text-muted)">None</em>'}</div>`));
+
+  h += '</div>';
+  return h;
+}
+
 // ARCHIVE TOGGLE
 let _hideArchived = true;
 function toggleArchive() {
@@ -890,6 +1017,7 @@ function render() {
 
     const wtMin = walkMin(l.lat, l.lon);
     tr.innerHTML = `
+      <td class="compare-cb-wrap"><input type="checkbox" class="compare-cb" data-n="${l.n}" onchange="toggleCompare(${l.n})" title="Add to compare"></td>
       <td class="c">${l.n}</td>
       <td class="addr" onclick="zoomTo(${l.lat},${l.lon})">${escHtml(l.addr)}</td>
       <td>${escHtml(l.hood)}</td>
@@ -1408,7 +1536,10 @@ function renderMobileCards() {
           <a href="${appleMapUrl(l.addr)}" target="_blank" class="m-addr-link">${escHtml(l.addr)}</a>
           <div class="m-card-hood">${escHtml(l.hood)}</div>
         </div>
-        <div class="m-card-price">${fmt(l.price)}${priceHistoryBadge(l.n)}</div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <div class="m-card-price">${fmt(l.price)}${priceHistoryBadge(l.n)}</div>
+          <div class="m-compare-wrap"><input type="checkbox" class="compare-cb" data-n="${l.n}" onchange="toggleCompare(${l.n})"><span style="font-size:11px">Compare</span></div>
+        </div>
       </div>
       <div class="m-card-meta">${l.beds} bd, ${l.baths} ba • ${l.type}</div>
       <div class="m-card-badges">
@@ -1676,8 +1807,9 @@ async function showTracker() {
 // KEYBOARD SHORTCUTS
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    if (document.getElementById('tour-modal').style.display  !== 'none') closeTourModal();
-    if (document.getElementById('score-modal').style.display !== 'none') closeScoreModal();
+    if (document.getElementById('tour-modal').style.display    !== 'none') closeTourModal();
+    if (document.getElementById('score-modal').style.display   !== 'none') closeScoreModal();
+    if (document.getElementById('compare-modal').style.display !== 'none') document.getElementById('compare-modal').style.display = 'none';
   }
 });
 

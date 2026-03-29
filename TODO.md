@@ -1,6 +1,6 @@
 # Home Search Tracker — Backlog & TODO
 
-Last updated: March 29, 2026 — Batch 4 complete
+Last updated: March 29, 2026 — Batch 5 complete
 
 > **How to use this file:**
 > When an item is implemented, move it to the ✅ Completed section at the bottom and update the "Last updated" date above.
@@ -118,17 +118,17 @@ Last updated: March 29, 2026 — Batch 4 complete
 ## 🔵 Polish & Quality of Life
 
 ### P1. Dark mode
-**Status:** Open
+**Status:** ✅ Completed (Batch 5)
 **Detail:** Often checked at night on mobile. No dark mode support.
 **Implementation:** Add CSS variables for dark theme. Toggle via button in header (moon/sun icon). Persist preference in `localStorage`. Also respect `prefers-color-scheme: dark` media query.
 
 ### P2. Score weight auto-normalize
-**Status:** Open
+**Status:** ✅ Completed (Batch 5)
 **Detail:** The score modal shows a red warning if category weights don't sum to 100 but still allows saving, which produces incorrect weighted scores.
 **Implementation:** Add an "Auto-normalize" button that proportionally adjusts weights to sum to 100. Or: auto-normalize silently on save.
 
 ### P3. Neighborhood grouping view
-**Status:** Open
+**Status:** ✅ Completed (Batch 5)
 **Detail:** No way to quickly see all West Town properties vs. all West Loop properties together.
 **Implementation:** Add a "Group by neighborhood" toggle above the table/cards. When active, insert neighborhood header rows between groups of properties sorted by `hood`.
 
@@ -138,7 +138,7 @@ Last updated: March 29, 2026 — Batch 4 complete
 **Implementation:** "Export" button generates a print-optimized or PDF view of the top-starred/scored properties with address, price, score, notes, and Redfin link.
 
 ### P5. Accessibility improvements
-**Status:** Open
+**Status:** ✅ Completed (Batch 5)
 **Detail:** Several accessibility gaps identified in code review.
 **Specific items:**
 - Add `role="dialog"` and `aria-modal="true"` to tour and score modals

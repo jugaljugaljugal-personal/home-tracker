@@ -14,18 +14,27 @@
       --blue: #2F5496; --blue-light: #D6E4F0; --green: #C6EFCE; --green-dark: #1a7a3a;
       --yellow: #FFE699; --yellow-dark: #8a6d00; --red-light: #FFC7CE; --red-dark: #9c0006;
       --gray: #f8f9fa; --border: #dee2e6; --text: #212529; --text-muted: #6c757d;
+      --bg-page: #f8f9fa; --bg-surface: #ffffff; --bg-row-hover: #f0f7ff;
+      --bg-row-alt: #fafafa; --shadow: rgba(0,0,0,0.08);
+    }
+    [data-theme="dark"] {
+      --blue: #5b8fd4; --blue-light: #1a2a4a; --green: #1a3a25; --green-dark: #4caf7d;
+      --yellow: #3d3000; --yellow-dark: #ffd600; --red-light: #3a1a1a; --red-dark: #ff7b7b;
+      --gray: #1e2130; --border: #2d3748; --text: #e2e8f0; --text-muted: #94a3b8;
+      --bg-page: #141722; --bg-surface: #1e2130; --bg-row-hover: #1a2a40;
+      --bg-row-alt: #1a1d2b; --shadow: rgba(0,0,0,0.4);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--gray); color: var(--text); }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-page); color: var(--text); }
     .header { background: linear-gradient(135deg, var(--blue), #1a3a6e); color: white; padding: 28px 32px 20px; }
     .header h1 { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
     .header p { font-size: 14px; opacity: 0.85; }
-    .stats-bar { display: flex; gap: 12px; padding: 16px 32px; background: white; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    .stats-bar { display: flex; gap: 12px; padding: 16px 32px; background: var(--bg-surface); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
     .stat { background: var(--gray); border-radius: 8px; padding: 10px 16px; min-width: 110px; }
     .stat-val { font-size: 22px; font-weight: 700; color: var(--blue); }
     .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
     #map { height: 480px; width: 100%; border-bottom: 3px solid var(--blue); }
-    .map-legend { display: flex; gap: 16px; padding: 10px 32px; background: white; border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; font-size: 13px; }
+    .map-legend { display: flex; gap: 16px; padding: 10px 32px; background: var(--bg-surface); border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; font-size: 13px; }
     .legend-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: middle; border: 2px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.3); }
     .popup-card { font-family: -apple-system, sans-serif; min-width: 260px; }
     .popup-card h3 { font-size: 15px; margin-bottom: 6px; color: var(--blue); }
@@ -34,21 +43,21 @@
     .popup-card .popup-links a { display: inline-block; margin-right: 6px; padding: 5px 12px; border-radius: 5px; font-size: 12px; font-weight: 700; text-decoration: none; color: white; }
     .popup-card .popup-links .rf { background: #dc3545; }
     .popup-card .popup-links .zl { background: #006AFF; }
-    .controls { display: flex; gap: 12px; padding: 16px 32px; background: white; border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
+    .controls { display: flex; gap: 12px; padding: 16px 32px; background: var(--bg-surface); border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
     .controls label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
     .filter-group { display: flex; flex-direction: column; gap: 4px; }
-    select, input[type="text"] { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: white; }
+    select, input[type="text"] { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: var(--bg-surface); color: var(--text); }
     select:focus, input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(47,84,150,0.15); }
     .reset-btn { padding: 8px 16px; background: var(--blue); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; align-self: flex-end; }
     .reset-btn:hover { background: #1a3a6e; }
     .table-wrap { padding: 16px 32px 32px; overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; background: var(--bg-surface); border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px var(--shadow); font-size: 13px; }
     thead th { background: var(--blue); color: white; padding: 11px 12px; text-align: left; cursor: pointer; user-select: none; position: sticky; top: 0; white-space: nowrap; font-size: 12px; }
-    thead th:hover { background: #1a3a6e; }
+    thead th:hover { opacity: 0.9; }
     thead th .sa { margin-left: 4px; font-size: 10px; opacity: 0.5; }
     thead th.sorted .sa { opacity: 1; }
-    tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.15s; }
-    tbody tr:hover { background: #f0f7ff; }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+    tbody tr:hover { background: var(--bg-row-hover); }
     tbody tr.hidden { display: none; }
     tbody tr.highlight { background: #fff3cd !important; }
     td { padding: 9px 12px; vertical-align: middle; }
@@ -102,7 +111,7 @@
     .ms-trigger { padding: 8px 28px 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236c757d'/%3E%3C/svg%3E") no-repeat right 10px center; cursor: pointer; min-width: 148px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: none; }
     .ms-trigger:hover, .ms-trigger.open { border-color: var(--blue); }
     .ms-trigger.open { box-shadow: 0 0 0 3px rgba(47,84,150,0.15); }
-    .ms-dropdown { display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 999; background: white; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.12); min-width: 170px; padding: 6px 0; }
+    .ms-dropdown { display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 999; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 6px 18px var(--shadow); min-width: 170px; padding: 6px 0; }
     .ms-dropdown.open { display: block; }
     .ms-opt { display: flex; align-items: center; gap: 10px; padding: 8px 14px; cursor: pointer; font-size: 13px; font-weight: 400; color: var(--text); }
     .ms-opt:hover { background: var(--gray); }
@@ -127,10 +136,10 @@
     #compare-modal .modal-box { max-width: 95vw; width: auto; max-height: 90vh; overflow-y: auto; }
     .compare-grid { display: grid; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; font-size: 13px; }
     .compare-row { display: contents; }
-    .compare-row > div { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; }
+    .compare-row > div { padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--bg-surface); }
     .compare-row:last-child > div { border-bottom: none; }
-    .compare-row:nth-child(even) > div { background: #fafafa; }
-    .compare-row > div:first-child { font-weight: 600; color: var(--text-muted); font-size: 12px; white-space: nowrap; background: #f5f5f5 !important; border-right: 1px solid var(--border); }
+    .compare-row:nth-child(even) > div { background: var(--bg-row-alt); }
+    .compare-row > div:first-child { font-weight: 600; color: var(--text-muted); font-size: 12px; white-space: nowrap; background: var(--gray) !important; border-right: 1px solid var(--border); }
     .compare-addr { font-weight: 700; color: var(--blue); font-size: 14px; line-height: 1.3; }
     .compare-remove { float: right; background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; line-height: 1; margin-left: 8px; }
     .compare-notes { font-size: 12px; color: var(--text-muted); max-width: 200px; line-height: 1.4; }
@@ -140,7 +149,7 @@
     .m-kevin-cell:focus { background: #f5f8ff; box-shadow: 0 0 0 2px rgba(47,84,150,0.12); }
     .m-kevin-cell:empty:before { content: "Add Kevin's notes…"; color: var(--text-muted); font-style: italic; }
     .kevin-section { padding: 0 32px 32px; }
-    .kevin-card { background: white; border-radius: 10px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .kevin-card { background: var(--bg-surface); border-radius: 10px; padding: 24px; box-shadow: 0 1px 4px var(--shadow); }
     .kevin-card h2 { font-size: 18px; color: var(--blue); margin-bottom: 16px; }
     .kevin-note { padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
     .kevin-note:last-child { border-bottom: none; }
@@ -148,7 +157,7 @@
     .kevin-note p { margin-top: 4px; font-size: 14px; color: var(--text-muted); line-height: 1.5; }
     .footer { text-align: center; padding: 24px; font-size: 12px; color: var(--text-muted); }
     .cards-wrap { display: none; padding: 12px 16px 32px; }
-    .m-card { background: white; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; }
+    .m-card { background: var(--bg-surface); border-radius: 10px; margin-bottom: 12px; box-shadow: 0 1px 4px var(--shadow); overflow: hidden; }
     .m-card.hidden { display: none; }
     .m-card-header { padding: 12px 14px 10px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; border-bottom: 1px solid #f0f0f0; }
     .m-card-header-left { flex: 1; min-width: 0; }
@@ -185,7 +194,7 @@
       }
     }
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 2000; display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 20px 12px; }
-    .modal-box { background: white; border-radius: 14px; width: 100%; max-width: 700px; margin: auto; box-shadow: 0 8px 40px rgba(0,0,0,0.25); overflow: hidden; }
+    .modal-box { background: var(--bg-surface); border-radius: 14px; width: 100%; max-width: 700px; margin: auto; box-shadow: 0 8px 40px var(--shadow); overflow: hidden; }
     .modal-header { background: linear-gradient(135deg, var(--blue), #1a3a6e); color: white; padding: 18px 24px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
     .modal-header h2 { font-size: 17px; font-weight: 700; margin: 0; line-height: 1.3; }
     .modal-header-sub { font-size: 12px; opacity: 0.8; margin-top: 2px; }
@@ -205,7 +214,7 @@
     .checklist-item input[type=checkbox] { margin-top: 2px; width: 15px; height: 15px; accent-color: var(--blue); flex-shrink: 0; cursor: pointer; }
     .checklist-item span { flex: 1; }
     .checklist-item.checked span { color: #aaa; text-decoration: line-through; }
-    .modal-footer { padding: 12px 20px; background: white; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; align-items: center; }
+    .modal-footer { padding: 12px 20px; background: var(--bg-surface); border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; align-items: center; }
     .modal-footer-left { margin-right: auto; font-size: 12px; color: var(--text-muted); }
     .btn-primary { padding: 8px 18px; background: var(--blue); color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
     .btn-secondary { padding: 8px 18px; background: white; color: var(--text); border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
@@ -236,6 +245,10 @@
     .chip-condition { background: #fef9c3; color: #854d0e; }
     .chip-financial { background: #fce7f3; color: #9d174d; }
     .weight-warning { font-size: 11px; color: #dc3545; margin-left: 6px; display: none; }
+    .normalize-btn { margin-left: 6px; padding: 2px 8px; font-size: 11px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
+    .hood-group-row td { background: var(--blue-light) !important; color: var(--blue); font-weight: 700; font-size: 13px; padding: 6px 12px; letter-spacing: 0.3px; }
+    [data-theme="dark"] .hood-group-row td { background: var(--blue-light) !important; color: #93c5fd; }
+    .m-hood-group-header { background: var(--blue-light); color: var(--blue); font-weight: 700; font-size: 12px; padding: 8px 16px; margin: 8px 0 4px; border-radius: 6px; letter-spacing: 0.3px; }
     .score-tbl { display: inline-block; min-width: 38px; padding: 3px 9px; border-radius: 10px; font-size: 12px; font-weight: 700; text-align: center; cursor: pointer; }
     .score-hi { background: #C6EFCE; color: #1a7a3a; }
     .score-mid { background: #FFE699; color: #8a6d00; }
@@ -275,9 +288,10 @@
 
 <!-- MAIN TRACKER (hidden until PIN verified) -->
 <div id="tracker-app">
-  <div class="header">
+  <div class="header" style="position:relative">
     <h1>Home Search Tracker</h1>
     <p>West Town / West Loop — Chicago</p>
+    <button id="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode" style="position:absolute;top:20px;right:24px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;border-radius:8px;padding:6px 12px;font-size:18px;cursor:pointer;line-height:1">🌙</button>
   </div>
 
   <div class="stats-bar">
@@ -321,7 +335,7 @@
     <div class="filter-group">
       <label>Status</label>
       <div class="multi-select">
-        <button class="ms-trigger" id="status-trigger" onclick="toggleMs('status')">All Statuses</button>
+        <button class="ms-trigger" id="status-trigger" onclick="toggleMs('status')" aria-expanded="false" aria-haspopup="listbox">All Statuses</button>
         <div class="ms-dropdown" id="status-dropdown">
           <label class="ms-opt"><input type="checkbox" value="ACTV" data-field="status"> Active</label>
           <label class="ms-opt"><input type="checkbox" value="NEW" data-field="status"> New</label>
@@ -336,7 +350,7 @@
     <div class="filter-group">
       <label>Criteria Ready</label>
       <div class="multi-select">
-        <button class="ms-trigger" id="criteria-trigger" onclick="toggleMs('criteria')">All</button>
+        <button class="ms-trigger" id="criteria-trigger" onclick="toggleMs('criteria')" aria-expanded="false" aria-haspopup="listbox">All</button>
         <div class="ms-dropdown" id="criteria-dropdown">
           <label class="ms-opt"><input type="checkbox" value="YES" data-field="criteria"> YES</label>
           <label class="ms-opt"><input type="checkbox" value="CTG" data-field="criteria"> CTG</label>
@@ -350,6 +364,7 @@
       <input type="text" id="search-input" class="search-input" placeholder="Address or neighborhood…" oninput="applyFilters()">
     </div>
     <button class="archive-toggle hiding" id="archive-toggle" onclick="toggleArchive()">Hide Archived</button>
+    <button class="archive-toggle" id="group-toggle" onclick="toggleGroupByHood()">Group by Hood</button>
     <button class="reset-btn" onclick="resetFilters()">Reset Filters</button>
   </div>
 
@@ -425,7 +440,7 @@
   </div>
 
   <!-- TOUR MODAL -->
-  <div id="tour-modal" class="modal-overlay" style="display:none" onclick="closeTourModal(event)">
+  <div id="tour-modal" class="modal-overlay" style="display:none" onclick="closeTourModal(event)" role="dialog" aria-modal="true" aria-labelledby="tour-modal-addr">
     <div class="modal-box" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div>
@@ -443,7 +458,7 @@
   </div>
 
   <!-- SCORE MODAL -->
-  <div id="score-modal" class="modal-overlay" style="display:none" onclick="closeScoreModal(event)">
+  <div id="score-modal" class="modal-overlay" style="display:none" onclick="closeScoreModal(event)" role="dialog" aria-modal="true" aria-labelledby="score-modal-addr">
     <div class="modal-box" onclick="event.stopPropagation()">
       <div class="modal-header">
         <div>
@@ -867,6 +882,60 @@ function buildCompareHtml() {
   return h;
 }
 
+// NEIGHBORHOOD GROUPING
+let _groupByHood = false;
+function toggleGroupByHood() {
+  _groupByHood = !_groupByHood;
+  const btn = document.getElementById('group-toggle');
+  btn.classList.toggle('hiding', _groupByHood);
+  btn.textContent = _groupByHood ? 'Ungroup' : 'Group by Hood';
+  applyGrouping();
+}
+function applyGrouping() {
+  // Table: insert or remove hood group header rows
+  const tbody = document.querySelector('#tb tbody');
+  // Remove existing group headers
+  tbody.querySelectorAll('.hood-group-row').forEach(r => r.remove());
+  if (_groupByHood) {
+    // Sort visible rows by hood then reinsert with headers
+    const rows = [...tbody.querySelectorAll('tr:not(.empty-state-row)')];
+    const visible = rows.filter(r => !r.classList.contains('hidden'));
+    visible.sort((a, b) => (a.dataset.hood || '').localeCompare(b.dataset.hood || ''));
+    let lastHood = null;
+    visible.forEach(row => {
+      const hood = row.dataset.hood || '';
+      if (hood !== lastHood) {
+        const hdr = document.createElement('tr');
+        hdr.className = 'hood-group-row';
+        const colCount = row.querySelectorAll('td').length;
+        hdr.innerHTML = `<td colspan="${colCount}">📍 ${hood}</td>`;
+        tbody.insertBefore(hdr, row);
+        lastHood = hood;
+      }
+      tbody.appendChild(row);
+    });
+  }
+  // Mobile: insert or remove hood group divs
+  const wrap = document.getElementById('cards-wrap');
+  wrap.querySelectorAll('.m-hood-group-header').forEach(h => h.remove());
+  if (_groupByHood) {
+    const cards = [...wrap.querySelectorAll('.m-card:not(.hidden)')];
+    cards.sort((a, b) => (a.dataset.hood || '').localeCompare(b.dataset.hood || ''));
+    let lastHood = null;
+    cards.forEach(card => {
+      const hood = card.dataset.hood || '';
+      if (hood !== lastHood) {
+        const hdr = document.createElement('div');
+        hdr.className = 'm-hood-group-header';
+        hdr.textContent = '📍 ' + hood;
+        wrap.insertBefore(hdr, card);
+        lastHood = hood;
+      }
+      wrap.appendChild(card);
+    });
+  }
+}
+
 // ARCHIVE TOGGLE
 let _hideArchived = true;
 function toggleArchive() {
@@ -942,9 +1011,9 @@ function domBadge(l) {
 
 function starHtml(n) {
   const rank = loadRank(n);
-  let h = '<div class="stars">';
+  let h = '<div class="stars" role="group" aria-label="Rating">';
   for (let i = 1; i <= 5; i++) {
-    h += '<span class="star' + (i <= rank ? ' on' : '') + '" data-n="' + n + '" data-rank="' + i + '">★</span>';
+    h += '<span class="star' + (i <= rank ? ' on' : '') + '" data-n="' + n + '" data-rank="' + i + '" role="button" aria-label="Rate ' + i + ' star' + (i !== 1 ? 's' : '') + '" tabindex="0">★</span>';
   }
   h += '</div>';
   return h;
@@ -1122,6 +1191,9 @@ function applyFilters() {
   // Empty state for mobile
   const emptyM = document.getElementById('empty-state-mobile');
   if (emptyM) emptyM.style.display = visibleCards === 0 ? 'block' : 'none';
+
+  // Re-apply neighborhood grouping after filter changes
+  if (typeof _groupByHood !== 'undefined' && _groupByHood) applyGrouping();
 }
 
 function resetFilters() {
@@ -1137,6 +1209,7 @@ function toggleMs(field) {
   const trigger = document.getElementById(field + '-trigger');
   dd.classList.toggle('open');
   trigger.classList.toggle('open');
+  trigger.setAttribute('aria-expanded', dd.classList.contains('open') ? 'true' : 'false');
 }
 
 function onMsChange() {
@@ -1207,6 +1280,9 @@ function attachStarHandlers() {
       const n = parseInt(e.target.dataset.n);
       const rank = parseInt(e.target.dataset.rank);
       saveRank(n, rank);
+    });
+    star.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); star.click(); }
     });
   });
 }
@@ -1347,7 +1423,7 @@ function buildScoreBody(n) {
 
     h += '<div class="score-cat-weight-row">';
     h += 'Weight: <input type="number" class="weight-input" id="weight-' + cat.id + '" value="' + (weights[cat.id] || cat.defaultWeight) + '" min="0" max="100" onchange="updateWeight(event, \'' + cat.id + '\')">';
-    h += '<span class="weight-warning" id="warn-' + cat.id + '">Weights must sum to 100</span>';
+    h += '<span class="weight-warning" id="warn-' + cat.id + '">Weights must sum to 100 <button class="normalize-btn" onclick="normalizeWeights()">Normalize</button></span>';
     h += '</div>';
 
     cat.criteria.forEach(crit => {
@@ -1426,6 +1502,30 @@ function updateWeight(e, catId) {
   warnings.forEach(w => w.style.display = shouldShow ? 'inline' : 'none');
 
   saveWeights(weights);
+}
+
+function normalizeWeights() {
+  const weights = loadWeights();
+  const sum = Object.values(weights).reduce((a, b) => a + b, 0);
+  if (sum === 0) return;
+  const ids = Object.keys(weights);
+  // Proportionally scale to sum to 100
+  let newWeights = {};
+  ids.forEach(id => newWeights[id] = Math.round(weights[id] / sum * 100));
+  // Fix rounding drift — adjust largest category
+  const drift = 100 - Object.values(newWeights).reduce((a, b) => a + b, 0);
+  if (drift !== 0) {
+    const largest = ids.reduce((a, b) => newWeights[a] >= newWeights[b] ? a : b);
+    newWeights[largest] += drift;
+  }
+  saveWeights(newWeights);
+  // Update inputs in DOM
+  ids.forEach(id => {
+    const inp = document.getElementById('weight-' + id);
+    if (inp) inp.value = newWeights[id];
+  });
+  document.querySelectorAll('.weight-warning').forEach(w => w.style.display = 'none');
+  showToast('Weights normalized ✓');
 }
 
 function updateScoreTotal(n) {
@@ -1803,6 +1903,23 @@ async function showTracker() {
 
   document.querySelectorAll('.ms-dropdown input').forEach(cb => cb.addEventListener('change', onMsChange));
 }
+
+// DARK MODE
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+  localStorage.setItem('hst_theme', theme);
+}
+function toggleTheme() {
+  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+}
+// Apply on load
+(function() {
+  const saved = localStorage.getItem('hst_theme');
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(saved || (prefersDark ? 'dark' : 'light'));
+})();
 
 // KEYBOARD SHORTCUTS
 document.addEventListener('keydown', e => {

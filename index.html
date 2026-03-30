@@ -126,6 +126,35 @@
     .listed-input:hover { border-color: var(--border); background: white; }
     .listed-input:focus { border-color: var(--blue); outline: none; box-shadow: 0 0 0 2px rgba(47,84,150,0.15); color: var(--text); background: white; }
     .kevin-note-cell { color: var(--blue); font-size: 12px; }
+    /* VIEW TABS */
+    .view-tab-bar { display:flex; background:var(--bg-surface); border-bottom:1px solid var(--border); padding:0 32px; gap:0; }
+    .view-tab { padding:11px 20px; background:none; border:none; border-bottom:3px solid transparent; font-size:13px; font-weight:600; cursor:pointer; color:var(--text-muted); white-space:nowrap; transition:color 0.15s; }
+    .view-tab.active { border-bottom-color:var(--blue); color:var(--blue); }
+    .view-tab:hover:not(.active) { color:var(--text); }
+    @media(max-width:768px) { .view-tab-bar { padding:0 8px; } .view-tab { padding:10px 12px; font-size:12px; } }
+    /* SHEETS */
+    .sheet-wrap { padding:16px 32px 48px; }
+    .sheet-row { background:var(--bg-surface); border-radius:10px; margin-bottom:8px; box-shadow:0 1px 3px var(--shadow); overflow:hidden; }
+    .sheet-row-hdr { display:flex; align-items:center; gap:10px; padding:12px 16px; cursor:pointer; user-select:none; }
+    .sheet-row-hdr:hover { background:var(--bg-row-hover); }
+    .sheet-row-num { font-weight:700; color:var(--text-muted); min-width:24px; font-size:12px; }
+    .sheet-row-info { flex:1; min-width:0; }
+    .sheet-row-addr { font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sheet-row-sub { font-size:11px; color:var(--text-muted); margin-top:1px; }
+    .sheet-chevron { font-size:11px; color:var(--text-muted); transition:transform 0.2s; flex-shrink:0; }
+    .sheet-row.open .sheet-chevron { transform:rotate(180deg); }
+    .sheet-row-body { display:none; border-top:1px solid var(--border); }
+    .sheet-row.open .sheet-row-body { display:block; }
+    .sheet-cat-chips { display:flex; gap:4px; flex-wrap:wrap; flex-shrink:0; }
+    @media(max-width:768px) { .sheet-wrap { padding:10px 10px 48px; } .sheet-row-addr { font-size:13px; } .sheet-cat-chips { display:none; } }
+    /* CHECKLIST SHEET */
+    .cl-pips { display:flex; gap:3px; align-items:center; flex-shrink:0; }
+    .cl-pip { width:9px; height:9px; border-radius:50%; background:var(--border); flex-shrink:0; }
+    .cl-pip.done    { background:var(--green-dark); }
+    .cl-pip.partial { background:#f0a500; }
+    .cl-sheet-tabs { display:flex; gap:4px; flex-wrap:wrap; padding:10px 14px 6px; border-bottom:1px solid var(--border); }
+    .cl-sheet-tab { padding:4px 10px; border:1px solid var(--border); border-radius:14px; font-size:11px; font-weight:600; cursor:pointer; background:var(--bg-surface); color:var(--text-muted); white-space:nowrap; }
+    .cl-sheet-tab.active { background:var(--blue); color:white; border-color:var(--blue); }
     /* COMPARE */
     .compare-cb-wrap { display: flex; align-items: center; justify-content: center; }
     .compare-cb { width: 16px; height: 16px; cursor: pointer; accent-color: var(--blue); }
@@ -317,6 +346,12 @@
     </div>
   </div>
 
+  <div class="view-tab-bar">
+    <button class="view-tab active" id="tab-properties" onclick="setView('properties')">🏠 Properties</button>
+    <button class="view-tab" id="tab-scores"     onclick="setView('scores')">📊 Score Sheet</button>
+    <button class="view-tab" id="tab-checklist"  onclick="setView('checklist')">✅ Checklist</button>
+  </div>
+
   <button class="map-toggle-btn collapsed" onclick="toggleMap()">
     <span class="map-toggle-icon">▶</span> <span>Map</span>
   </button>
@@ -427,6 +462,10 @@
   </div>
 
   <div class="footer">Generated March 28, 2026 • Sources: Kevin Patel / connectMLS + Redfin email alerts</div>
+
+  <!-- BULK SHEETS -->
+  <div id="score-sheet"     style="display:none"></div>
+  <div id="checklist-sheet" style="display:none"></div>
 
   <!-- COMPARE MODAL -->
   <div id="compare-modal" class="modal-overlay" style="display:none" onclick="closeCompareModal(event)" role="dialog" aria-modal="true">
@@ -1196,6 +1235,12 @@ function applyFilters() {
 
   // Re-apply neighborhood grouping after filter changes
   if (typeof _groupByHood !== 'undefined' && _groupByHood) applyGrouping();
+
+  // Re-render bulk sheets if active
+  if (typeof _currentView !== 'undefined') {
+    if (_currentView === 'scores')    renderScoreSheet();
+    if (_currentView === 'checklist') renderChecklistSheet();
+  }
 }
 
 function resetFilters() {
@@ -1345,7 +1390,9 @@ function switchClTab(secId) {
 function toggleCheck(e) {
   const secId = e.target.dataset.sec;
   const item = e.target.dataset.item;
-  const n = parseInt(document.getElementById('tour-modal').dataset.n);
+  // Support both tour modal and checklist sheet (find nearest data-n ancestor)
+  const wrapper = e.target.closest('[data-n]');
+  const n = wrapper ? parseInt(wrapper.dataset.n) : parseInt(document.getElementById('tour-modal').dataset.n);
   const l = L_DATA.find(x => x.n === n);
   if (!l) return;
 
@@ -1354,8 +1401,35 @@ function toggleCheck(e) {
   checks[secId][item] = e.target.checked;
   saveChecklist(l.n, checks);
 
-  e.target.closest('.checklist-item').classList.toggle('checked');
+  e.target.closest('.checklist-item').classList.toggle('checked', e.target.checked);
   updateClTotalProgress(l.n);
+
+  // Update checklist sheet pips if we're in that view
+  if (typeof _currentView !== 'undefined' && _currentView === 'checklist') {
+    const sheetRow = document.querySelector(`#checklist-sheet .sheet-row[data-n="${n}"]`);
+    if (sheetRow) {
+      // Refresh pips
+      sheetRow.querySelectorAll('.cl-pip').forEach((pip, i) => {
+        const sec = CHECKLIST_SECTIONS[i];
+        if (!sec) return;
+        const done = sec.items.filter(itm => checks[sec.id]?.[itm]).length;
+        pip.className = 'cl-pip' + (done === 0 ? '' : done === sec.items.length ? ' done' : ' partial');
+        pip.title = sec.title + ': ' + done + '/' + sec.items.length;
+      });
+      // Refresh overall progress badge
+      const progBadge = sheetRow.querySelector('.cl-progress');
+      if (progBadge) progBadge.outerHTML = clProgressHtml(n);
+      // Refresh active tab label
+      const activeTab = sheetRow.querySelector('.cl-sheet-tab.active');
+      if (activeTab) {
+        const sec = CHECKLIST_SECTIONS.find(s => s.id === activeTab.dataset.sec);
+        if (sec) {
+          const done = sec.items.filter(itm => checks[sec.id]?.[itm]).length;
+          activeTab.textContent = sec.title.split(' ').slice(0,2).join(' ') + ' ' + done + '/' + sec.items.length;
+        }
+      }
+    }
+  }
 }
 
 function updateClTotalProgress(n) {
@@ -1476,7 +1550,9 @@ function setScore(e, catId, critId, val) {
   e.target.parentElement.querySelectorAll('.score-dot').forEach(d => d.classList.remove('active'));
   e.target.classList.add('active');
 
-  const n = parseInt(document.getElementById('score-modal').dataset.n);
+  // Support both score modal and inline score sheet
+  const container = e.target.closest('[data-n]');
+  const n = container ? parseInt(container.dataset.n) : parseInt(document.getElementById('score-modal').dataset.n);
   const l = L_DATA.find(x => x.n === n);
   if (!l) return;
 
@@ -1484,7 +1560,22 @@ function setScore(e, catId, critId, val) {
   scores[critId] = val.toString();
   saveScores(l.n, scores);
 
-  document.getElementById('score-modal-body').innerHTML = buildScoreBody(n);
+  // Refresh the body in the right container
+  const sheetBody = e.target.closest('.sheet-row-body');
+  if (sheetBody) {
+    sheetBody.querySelector('.score-modal-body-inner, .modal-body-content, [data-score-body]')?.remove();
+    sheetBody.innerHTML = buildScoreBody(n);
+    // Update header chips and badge
+    const row = sheetBody.closest('.sheet-row');
+    if (row) {
+      const chips = row.querySelector('.sheet-cat-chips');
+      if (chips) chips.innerHTML = buildCategoryChips(n);
+      const badge = row.querySelector('.score-tbl');
+      if (badge) badge.outerHTML = scoreBadgeHtml(n);
+    }
+  } else {
+    document.getElementById('score-modal-body').innerHTML = buildScoreBody(n);
+  }
 
   const scoreCell = document.getElementById('score-cell-' + n);
   if (scoreCell) {
@@ -1492,6 +1583,8 @@ function setScore(e, catId, critId, val) {
     const tr = scoreCell.closest('tr');
     if (tr) tr.dataset.score = calcScore(n) ?? -1;
   }
+  const mScoreCell = document.getElementById('m-score-cell-' + n);
+  if (mScoreCell) mScoreCell.innerHTML = scoreBadgeHtml(n);
 }
 
 function updateWeight(e, catId) {
@@ -1537,7 +1630,19 @@ function updateScoreTotal(n) {
 function clearScore(n) {
   if (!confirm('Clear all scores?')) return;
   saveScores(n, {});
-  document.getElementById('score-modal-body').innerHTML = buildScoreBody(n);
+  // Refresh modal if open
+  const modalBody = document.getElementById('score-modal-body');
+  if (modalBody) modalBody.innerHTML = buildScoreBody(n);
+  // Refresh score sheet row if open
+  const sheetBody = document.querySelector(`#score-sheet .sheet-row[data-n="${n}"] .sheet-row-body`);
+  if (sheetBody) sheetBody.innerHTML = buildScoreBody(n);
+  const sheetRow = document.querySelector(`#score-sheet .sheet-row[data-n="${n}"]`);
+  if (sheetRow) {
+    const chips = sheetRow.querySelector('.sheet-cat-chips');
+    if (chips) chips.innerHTML = buildCategoryChips(n);
+    const badge = sheetRow.querySelector('.score-tbl');
+    if (badge) badge.outerHTML = scoreBadgeHtml(n);
+  }
   const scoreCell = document.getElementById('score-cell-' + n);
   if (scoreCell) {
     scoreCell.innerHTML = scoreBadgeHtml(n);
@@ -1686,6 +1791,7 @@ function attachMobileStarHandlers() {
 
 // VIEW MODE
 function initViewMode() {
+  if (typeof _currentView !== 'undefined' && _currentView !== 'properties') return;
   const isDesktop = window.innerWidth > 768;
   document.querySelector('.table-wrap').style.display = isDesktop ? 'block' : 'none';
   document.getElementById('cards-wrap').style.display = isDesktop ? 'none' : 'block';
@@ -1746,6 +1852,7 @@ function setupFirebaseListeners() {
       }
     });
     calcStats();
+    if (typeof _currentView !== 'undefined' && _currentView === 'scores') renderScoreSheet();
   });
 
   trackerRef.child('checklists').on('value', snap => {
@@ -1757,6 +1864,7 @@ function setupFirebaseListeners() {
       if (mCell) mCell.innerHTML = clProgressHtml(l.n);
     });
     calcStats();
+    if (typeof _currentView !== 'undefined' && _currentView === 'checklist') renderChecklistSheet();
   });
 
   trackerRef.child('listed').on('value', snap => {
@@ -1904,6 +2012,161 @@ async function showTracker() {
   setupFirebaseListeners();
 
   document.querySelectorAll('.ms-dropdown input').forEach(cb => cb.addEventListener('change', onMsChange));
+}
+
+// BULK SHEET VIEW SWITCHING
+let _currentView = 'properties';
+
+function setView(view) {
+  _currentView = view;
+  document.querySelectorAll('.view-tab').forEach(t =>
+    t.classList.toggle('active', t.id === 'tab-' + view));
+
+  const isProps = view === 'properties';
+  const scoreEl = document.getElementById('score-sheet');
+  const clEl    = document.getElementById('checklist-sheet');
+  const msBar   = document.getElementById('mobile-sort-bar');
+  const cmpBar  = document.getElementById('compare-bar');
+  const tblWrap = document.querySelector('.table-wrap');
+  const cardsWrap = document.getElementById('cards-wrap');
+
+  if (tblWrap)    tblWrap.style.display    = isProps ? '' : 'none';
+  if (cardsWrap)  cardsWrap.style.display  = isProps ? '' : 'none';
+  if (msBar)      msBar.style.display      = isProps ? '' : 'none';
+  if (cmpBar)     cmpBar.classList.remove('show');
+  if (scoreEl)    scoreEl.style.display    = view === 'scores'     ? 'block' : 'none';
+  if (clEl)       clEl.style.display       = view === 'checklist'  ? 'block' : 'none';
+
+  if (view === 'scores')     renderScoreSheet();
+  if (view === 'checklist')  renderChecklistSheet();
+  if (view === 'properties') initViewMode();
+}
+
+function isPropertyVisible(l) {
+  const status   = [...document.querySelectorAll('#status-dropdown input:checked')].map(cb => cb.value);
+  const criteria = [...document.querySelectorAll('#criteria-dropdown input:checked')].map(cb => cb.value);
+  const searchVal = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
+  const hasStatus   = status.length   === 0 || status.includes(l.st);
+  const hasCriteria = criteria.length === 0 || criteria.includes(l.cr);
+  const matchSearch = !searchVal || l.addr.toLowerCase().includes(searchVal) || l.hood.toLowerCase().includes(searchVal);
+  const isArchived  = (typeof _hideArchived !== 'undefined') && _hideArchived && l.cr === 'NO' && status.length === 0 && criteria.length === 0;
+  return hasStatus && hasCriteria && matchSearch && !isArchived;
+}
+
+// SCORE SHEET
+let _expandedScoreN = null;
+
+function renderScoreSheet() {
+  const wrap = document.getElementById('score-sheet');
+  if (!wrap) return;
+  const visible = L_DATA.filter(l => isPropertyVisible(l));
+  let h = '<div class="sheet-wrap">';
+  if (visible.length === 0) {
+    h += '<div class="empty-state">No properties match your filters</div>';
+  }
+  visible.forEach(l => {
+    const isOpen = _expandedScoreN === l.n;
+    h += `<div class="sheet-row${isOpen ? ' open' : ''}" data-n="${l.n}">`;
+    h += `<div class="sheet-row-hdr" onclick="toggleScoreExpand(${l.n})">`;
+    h += `<span class="sheet-row-num">#${l.n}</span>`;
+    h += `<div class="sheet-row-info"><div class="sheet-row-addr">${escHtml(l.addr)}</div>`;
+    h += `<div class="sheet-row-sub">${escHtml(l.hood)} · ${fmt(l.price)}</div></div>`;
+    h += `<div class="sheet-cat-chips">${buildCategoryChips(l.n)}</div>`;
+    h += scoreBadgeHtml(l.n);
+    h += `<span class="sheet-chevron">▼</span></div>`;
+    if (isOpen) {
+      h += `<div class="sheet-row-body" data-n="${l.n}">${buildScoreBody(l.n)}</div>`;
+    }
+    h += '</div>';
+  });
+  h += '</div>';
+  wrap.innerHTML = h;
+}
+
+function toggleScoreExpand(n) {
+  _expandedScoreN = (_expandedScoreN === n) ? null : n;
+  renderScoreSheet();
+}
+
+function buildCategoryChips(n) {
+  const scores = loadScores(n);
+  let h = '';
+  SCORE_CATEGORIES.forEach(cat => {
+    let sum = 0, count = 0;
+    cat.criteria.forEach(c => {
+      const v = scores[c.id];
+      if (v && v !== 'NA') { sum += parseInt(v); count++; }
+    });
+    if (count > 0) {
+      h += `<span class="score-cat-chip ${cat.chipClass}">${cat.id.toUpperCase()} ${Math.round(sum/count)}</span>`;
+    }
+  });
+  return h || `<span style="font-size:11px;color:var(--text-muted)">Not scored</span>`;
+}
+
+// CHECKLIST SHEET
+let _expandedClN   = null;
+let _expandedClSec = null;
+
+function renderChecklistSheet() {
+  const wrap = document.getElementById('checklist-sheet');
+  if (!wrap) return;
+  const visible = L_DATA.filter(l => isPropertyVisible(l));
+  let h = '<div class="sheet-wrap">';
+  if (visible.length === 0) h += '<div class="empty-state">No properties match your filters</div>';
+  visible.forEach(l => {
+    const cl = loadChecklist(l.n);
+    const isOpen = _expandedClN === l.n;
+    const secId  = _expandedClSec || CHECKLIST_SECTIONS[0].id;
+    h += `<div class="sheet-row${isOpen ? ' open' : ''}" data-n="${l.n}">`;
+    h += `<div class="sheet-row-hdr" onclick="toggleClExpand(${l.n})">`;
+    h += `<span class="sheet-row-num">#${l.n}</span>`;
+    h += `<div class="sheet-row-info"><div class="sheet-row-addr">${escHtml(l.addr)}</div>`;
+    h += `<div class="sheet-row-sub">${escHtml(l.hood)}</div></div>`;
+    // 11-pip progress row
+    h += '<div class="cl-pips">';
+    CHECKLIST_SECTIONS.forEach(sec => {
+      const done  = sec.items.filter(item => cl[sec.id]?.[item]).length;
+      const total = sec.items.length;
+      const cls   = done === 0 ? '' : done === total ? ' done' : ' partial';
+      h += `<div class="cl-pip${cls}" title="${escHtml(sec.title)}: ${done}/${total}"></div>`;
+    });
+    h += '</div>';
+    h += clProgressHtml(l.n);
+    h += `<span class="sheet-chevron">▼</span></div>`;
+    if (isOpen) {
+      h += `<div class="sheet-row-body" data-n="${l.n}">`;
+      // Section tabs
+      h += '<div class="cl-sheet-tabs">';
+      CHECKLIST_SECTIONS.forEach(sec => {
+        const done  = sec.items.filter(item => cl[sec.id]?.[item]).length;
+        const isAct = secId === sec.id;
+        const emoji = sec.title.split(' ')[0];
+        h += `<button class="cl-sheet-tab${isAct ? ' active' : ''}" data-sec="${sec.id}" onclick="setClSection(${l.n},'${sec.id}')">`;
+        h += `${emoji} ${done}/${sec.items.length}</button>`;
+      });
+      h += '</div>';
+      // Active section content — reuse buildClPane
+      const activeSec = CHECKLIST_SECTIONS.find(s => s.id === secId);
+      if (activeSec) h += buildClPane(l.n, activeSec);
+      h += '</div>';
+    }
+    h += '</div>';
+  });
+  h += '</div>';
+  wrap.innerHTML = h;
+}
+
+function toggleClExpand(n) {
+  if (_expandedClN === n) { _expandedClN = null; _expandedClSec = null; }
+  else { _expandedClN = n; _expandedClSec = null; }
+  renderChecklistSheet();
+}
+
+function setClSection(n, secId) {
+  _expandedClN   = n;
+  _expandedClSec = secId;
+  renderChecklistSheet();
 }
 
 // DARK MODE

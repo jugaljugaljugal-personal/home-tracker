@@ -1,2212 +1,531 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Home Search Tracker — West Town / West Loop</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" async></script>
-  <!-- Firebase v8 compat -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-  <style>
-    :root {
-      --blue: #2F5496; --blue-light: #D6E4F0; --green: #C6EFCE; --green-dark: #1a7a3a;
-      --yellow: #FFE699; --yellow-dark: #8a6d00; --red-light: #FFC7CE; --red-dark: #9c0006;
-      --gray: #f8f9fa; --border: #dee2e6; --text: #212529; --text-muted: #6c757d;
-      --bg-page: #f8f9fa; --bg-surface: #ffffff; --bg-row-hover: #f0f7ff;
-      --bg-row-alt: #fafafa; --shadow: rgba(0,0,0,0.08);
-    }
-    [data-theme="dark"] {
-      --blue: #5b8fd4; --blue-light: #1a2a4a; --green: #1a3a25; --green-dark: #4caf7d;
-      --yellow: #3d3000; --yellow-dark: #ffd600; --red-light: #3a1a1a; --red-dark: #ff7b7b;
-      --gray: #1e2130; --border: #2d3748; --text: #e2e8f0; --text-muted: #94a3b8;
-      --bg-page: #141722; --bg-surface: #1e2130; --bg-row-hover: #1a2a40;
-      --bg-row-alt: #1a1d2b; --shadow: rgba(0,0,0,0.4);
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-page); color: var(--text); }
-    .header { background: linear-gradient(135deg, var(--blue), #1a3a6e); color: white; padding: 28px 32px 20px; }
-    .header h1 { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
-    .header p { font-size: 14px; opacity: 0.85; }
-    .stats-bar { display: flex; gap: 12px; padding: 16px 32px; background: var(--bg-surface); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-    .stat { background: var(--gray); border-radius: 8px; padding: 10px 16px; min-width: 110px; }
-    .stat-val { font-size: 22px; font-weight: 700; color: var(--blue); }
-    .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-    #map { height: 480px; width: 100%; border-bottom: 3px solid var(--blue); }
-    .map-legend { display: flex; gap: 16px; padding: 10px 32px; background: var(--bg-surface); border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; font-size: 13px; }
-    .legend-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: middle; border: 2px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.3); }
-    .popup-card { font-family: -apple-system, sans-serif; min-width: 260px; }
-    .popup-card h3 { font-size: 15px; margin-bottom: 6px; color: var(--blue); }
-    .popup-card .price { font-size: 20px; font-weight: 800; color: var(--blue); margin-bottom: 6px; }
-    .popup-card .details { font-size: 13px; color: #555; margin-bottom: 8px; line-height: 1.5; }
-    .popup-card .popup-links a { display: inline-block; margin-right: 6px; padding: 5px 12px; border-radius: 5px; font-size: 12px; font-weight: 700; text-decoration: none; color: white; }
-    .popup-card .popup-links .rf { background: #dc3545; }
-    .popup-card .popup-links .zl { background: #006AFF; }
-    .controls { display: flex; gap: 12px; padding: 16px 32px; background: var(--bg-surface); border-bottom: 1px solid var(--border); flex-wrap: wrap; align-items: center; }
-    .controls label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-    .filter-group { display: flex; flex-direction: column; gap: 4px; }
-    select, input[type="text"] { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: var(--bg-surface); color: var(--text); }
-    select:focus, input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(47,84,150,0.15); }
-    .reset-btn { padding: 8px 16px; background: var(--blue); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; align-self: flex-end; }
-    .reset-btn:hover { background: #1a3a6e; }
-    .table-wrap { padding: 16px 32px 32px; overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; background: var(--bg-surface); border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px var(--shadow); font-size: 13px; }
-    thead th { background: var(--blue); color: white; padding: 11px 12px; text-align: left; cursor: pointer; user-select: none; position: sticky; top: 0; white-space: nowrap; font-size: 12px; }
-    thead th:hover { opacity: 0.9; }
-    thead th .sa { margin-left: 4px; font-size: 10px; opacity: 0.5; }
-    thead th.sorted .sa { opacity: 1; }
-    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
-    tbody tr:hover { background: var(--bg-row-hover); }
-    tbody tr.hidden { display: none; }
-    tbody tr.highlight { background: #fff3cd !important; }
-    td { padding: 9px 12px; vertical-align: middle; }
-    td.price { font-weight: 700; color: var(--blue); white-space: nowrap; }
-    td.addr { font-weight: 600; cursor: pointer; }
-    td.addr:hover { color: var(--blue); text-decoration: underline; }
-    td.c { text-align: center; }
-    .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
-    .b-active { background: var(--green); color: var(--green-dark); }
-    .b-new { background: #d4f5e9; color: #0d6e3e; }
-    .b-ctg { background: var(--yellow); color: var(--yellow-dark); }
-    .b-pend { background: #ffe0cc; color: #a84300; }
-    .b-no { background: var(--red-light); color: var(--red-dark); }
-    .b-priv { background: #e8daef; color: #6c3483; }
-    .cr-yes { background: var(--green); color: var(--green-dark); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
-    .cr-ctg { background: var(--yellow); color: var(--yellow-dark); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
-    .cr-pend { background: #ffe0cc; color: #a84300; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
-    .cr-no { background: var(--red-light); color: var(--red-dark); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
-    .links a { display: inline-block; margin-right: 4px; margin-bottom: 2px; padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 700; text-decoration: none; color: white; }
-    .m-card-links { padding: 4px 12px 0; }
-    .search-input { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; min-width: 200px; outline: none; background: white; }
-    .search-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(47,84,150,0.10); }
-    .toast { position: fixed; bottom: 24px; right: 24px; background: #1a7a3a; color: white; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; opacity: 0; transform: translateY(8px); transition: opacity 0.2s, transform 0.2s; pointer-events: none; z-index: 9000; }
-    .toast.show { opacity: 1; transform: translateY(0); }
-    .toast.error { background: #9c0006; }
-    .mobile-sort-bar { display: none; padding: 8px 12px; gap: 8px; flex-wrap: wrap; align-items: center; background: white; border-bottom: 1px solid var(--border); }
-    .mobile-sort-label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
-    .msort-btn { padding: 5px 12px; border: 1px solid var(--border); border-radius: 14px; font-size: 12px; background: white; cursor: pointer; color: var(--text); }
-    .msort-btn.active { background: var(--blue); color: white; border-color: var(--blue); }
-    @media (max-width: 768px) { .mobile-sort-bar { display: flex; } }
-    .empty-state { text-align: center; padding: 32px; color: var(--text-muted); font-size: 14px; }
-    #empty-state-mobile { display: none; padding: 32px 16px; text-align: center; color: var(--text-muted); font-size: 14px; }
-    .toured-btn { font-size: 18px; cursor: pointer; user-select: none; opacity: 0.35; transition: opacity 0.15s, transform 0.15s; display: inline-block; }
-    .toured-btn.active { opacity: 1; transform: scale(1.15); }
-    .toured-btn:hover { opacity: 0.8; }
-    .m-toured-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); cursor: pointer; user-select: none; }
-    .m-toured-wrap.active { color: var(--green-dark); font-weight: 600; }
-    .archive-toggle { padding: 8px 16px; background: white; color: var(--text-muted); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; align-self: flex-end; }
-    .archive-toggle.hiding { background: var(--gray); }
-    .price-hist { font-size: 11px; color: var(--text-muted); margin-left: 6px; white-space: nowrap; }
-    .link-rf { background: #dc3545; }
-    .link-zl { background: #006AFF; }
-    .notes-cell { font-size: 12px; color: var(--text-muted); max-width: 260px; line-height: 1.4; min-width: 120px; border-radius: 4px; padding: 3px 5px; cursor: text; outline: none; }
-    .notes-cell:hover:not(:focus) { background: #f0f7ff; }
-    .notes-cell:focus { border: 1.5px solid var(--blue); color: var(--text); background: #fff; box-shadow: 0 0 0 3px rgba(47,84,150,0.10); }
-    .stars { white-space: nowrap; display: flex; gap: 1px; justify-content: center; }
-    .star { cursor: pointer; font-size: 18px; color: #ddd; display: inline-block; transition: color 0.08s; line-height: 1; user-select: none; }
-    .star.on { color: #f0a500; }
-    .rank-col { min-width: 96px; text-align: center; }
-    .multi-select { position: relative; }
-    .ms-trigger { padding: 8px 28px 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236c757d'/%3E%3C/svg%3E") no-repeat right 10px center; cursor: pointer; min-width: 148px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: none; }
-    .ms-trigger:hover, .ms-trigger.open { border-color: var(--blue); }
-    .ms-trigger.open { box-shadow: 0 0 0 3px rgba(47,84,150,0.15); }
-    .ms-dropdown { display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 999; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 6px 18px var(--shadow); min-width: 170px; padding: 6px 0; }
-    .ms-dropdown.open { display: block; }
-    .ms-opt { display: flex; align-items: center; gap: 10px; padding: 8px 14px; cursor: pointer; font-size: 13px; font-weight: 400; color: var(--text); }
-    .ms-opt:hover { background: var(--gray); }
-    .ms-opt input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--blue); cursor: pointer; flex-shrink: 0; }
-    .wt-fast { background: #C6EFCE; color: #1a7a3a; padding: 3px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-    .wt-mid  { background: #FFE699; color: #8a6d00; padding: 3px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-    .wt-slow { background: #FFC7CE; color: #9c0006; padding: 3px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-    .dom-fresh { background: #C6EFCE; color: #1a7a3a; padding: 3px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-    .dom-mid   { background: #FFE699; color: #8a6d00; padding: 3px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-    .dom-old   { background: #FFC7CE; color: #9c0006; padding: 3px 9px; border-radius: 10px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-    .listed-input { border: 1px solid transparent; border-radius: 4px; padding: 2px 4px; font-size: 11px; color: var(--text-muted); background: transparent; cursor: pointer; width: 104px; font-family: inherit; }
-    .listed-input:hover { border-color: var(--border); background: white; }
-    .listed-input:focus { border-color: var(--blue); outline: none; box-shadow: 0 0 0 2px rgba(47,84,150,0.15); color: var(--text); background: white; }
-    .kevin-note-cell { color: var(--blue); font-size: 12px; }
-    /* VIEW TABS */
-    .view-tab-bar { display:flex; background:var(--bg-surface); border-bottom:1px solid var(--border); padding:0 32px; gap:0; }
-    .view-tab { padding:11px 20px; background:none; border:none; border-bottom:3px solid transparent; font-size:13px; font-weight:600; cursor:pointer; color:var(--text-muted); white-space:nowrap; transition:color 0.15s; }
-    .view-tab.active { border-bottom-color:var(--blue); color:var(--blue); }
-    .view-tab:hover:not(.active) { color:var(--text); }
-    @media(max-width:768px) { .view-tab-bar { padding:0 8px; } .view-tab { padding:10px 12px; font-size:12px; } }
-    /* SHEETS */
-    .sheet-wrap { padding:16px 32px 48px; }
-    .sheet-row { background:var(--bg-surface); border-radius:10px; margin-bottom:8px; box-shadow:0 1px 3px var(--shadow); overflow:hidden; }
-    .sheet-row-hdr { display:flex; align-items:center; gap:10px; padding:12px 16px; cursor:pointer; user-select:none; }
-    .sheet-row-hdr:hover { background:var(--bg-row-hover); }
-    .sheet-row-num { font-weight:700; color:var(--text-muted); min-width:24px; font-size:12px; }
-    .sheet-row-info { flex:1; min-width:0; }
-    .sheet-row-addr { font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .sheet-row-sub { font-size:11px; color:var(--text-muted); margin-top:1px; }
-    .sheet-chevron { font-size:11px; color:var(--text-muted); transition:transform 0.2s; flex-shrink:0; }
-    .sheet-row.open .sheet-chevron { transform:rotate(180deg); }
-    .sheet-row-body { display:none; border-top:1px solid var(--border); }
-    .sheet-row.open .sheet-row-body { display:block; }
-    .sheet-cat-chips { display:flex; gap:4px; flex-wrap:wrap; flex-shrink:0; }
-    @media(max-width:768px) { .sheet-wrap { padding:10px 10px 48px; } .sheet-row-addr { font-size:13px; } .sheet-cat-chips { display:none; } }
-    /* CHECKLIST SHEET */
-    .cl-pips { display:flex; gap:3px; align-items:center; flex-shrink:0; }
-    .cl-pip { width:9px; height:9px; border-radius:50%; background:var(--border); flex-shrink:0; }
-    .cl-pip.done    { background:var(--green-dark); }
-    .cl-pip.partial { background:#f0a500; }
-    .cl-sheet-tabs { display:flex; gap:4px; flex-wrap:wrap; padding:10px 14px 6px; border-bottom:1px solid var(--border); }
-    .cl-sheet-tab { padding:4px 10px; border:1px solid var(--border); border-radius:14px; font-size:11px; font-weight:600; cursor:pointer; background:var(--bg-surface); color:var(--text-muted); white-space:nowrap; }
-    .cl-sheet-tab.active { background:var(--blue); color:white; border-color:var(--blue); }
-    /* COMPARE */
-    .compare-cb-wrap { display: flex; align-items: center; justify-content: center; }
-    .compare-cb { width: 16px; height: 16px; cursor: pointer; accent-color: var(--blue); }
-    .compare-bar { display: none; align-items: center; gap: 10px; padding: 8px 20px; background: var(--blue); color: white; border-radius: 8px; margin: 0 32px 8px; font-size: 13px; font-weight: 600; }
-    .compare-bar.show { display: flex; }
-    .compare-bar-btn { background: white; color: var(--blue); border: none; padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
-    .compare-bar-clear { background: transparent; color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.4); padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; margin-left: auto; }
-    #compare-modal .modal-box { max-width: 95vw; width: auto; max-height: 90vh; overflow-y: auto; }
-    .compare-grid { display: grid; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; font-size: 13px; }
-    .compare-row { display: contents; }
-    .compare-row > div { padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--bg-surface); }
-    .compare-row:last-child > div { border-bottom: none; }
-    .compare-row:nth-child(even) > div { background: var(--bg-row-alt); }
-    .compare-row > div:first-child { font-weight: 600; color: var(--text-muted); font-size: 12px; white-space: nowrap; background: var(--gray) !important; border-right: 1px solid var(--border); }
-    .compare-addr { font-weight: 700; color: var(--blue); font-size: 14px; line-height: 1.3; }
-    .compare-remove { float: right; background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; line-height: 1; margin-left: 8px; }
-    .compare-notes { font-size: 12px; color: var(--text-muted); max-width: 200px; line-height: 1.4; }
-    .m-compare-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); padding: 4px 0; }
-    @media (max-width: 768px) { .compare-bar { margin: 0 12px 8px; } }
-    .m-kevin-cell { font-size: 13px; color: var(--blue); line-height: 1.4; min-height: 20px; outline: none; border-radius: 4px; padding: 2px 4px; }
-    .m-kevin-cell:focus { background: #f5f8ff; box-shadow: 0 0 0 2px rgba(47,84,150,0.12); }
-    .m-kevin-cell:empty:before { content: "Add Kevin's notes…"; color: var(--text-muted); font-style: italic; }
-    .kevin-section { padding: 0 32px 32px; }
-    .kevin-card { background: var(--bg-surface); border-radius: 10px; padding: 24px; box-shadow: 0 1px 4px var(--shadow); }
-    .kevin-card h2 { font-size: 18px; color: var(--blue); margin-bottom: 16px; }
-    .kevin-note { padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
-    .kevin-note:last-child { border-bottom: none; }
-    .kevin-note strong { color: var(--blue); }
-    .kevin-note p { margin-top: 4px; font-size: 14px; color: var(--text-muted); line-height: 1.5; }
-    .footer { text-align: center; padding: 24px; font-size: 12px; color: var(--text-muted); }
-    .cards-wrap { display: none; padding: 12px 16px 32px; }
-    .m-card { background: var(--bg-surface); border-radius: 10px; margin-bottom: 12px; box-shadow: 0 1px 4px var(--shadow); overflow: hidden; }
-    .m-card.hidden { display: none; }
-    .m-card-header { padding: 12px 14px 10px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; border-bottom: 1px solid #f0f0f0; }
-    .m-card-header-left { flex: 1; min-width: 0; }
-    .m-addr-link { font-size: 15px; font-weight: 700; color: var(--blue); text-decoration: none; display: block; line-height: 1.3; }
-    .m-addr-link:active { opacity: 0.7; }
-    .m-card-hood { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-    .m-card-price { font-size: 19px; font-weight: 800; color: var(--blue); white-space: nowrap; flex-shrink: 0; padding-top: 2px; }
-    .m-card-meta { padding: 8px 14px 6px; font-size: 13px; color: var(--text-muted); }
-    .m-card-badges { padding: 2px 14px 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-    .m-card-actions { padding: 10px 14px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; border-top: 1px solid #f0f0f0; }
-    .m-card-notes { padding: 8px 14px 12px; border-top: 1px solid #f0f0f0; }
-    .m-notes-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-    .m-notes-cell { font-size: 13px; color: var(--text); line-height: 1.4; border-radius: 6px; padding: 6px 8px; cursor: text; outline: none; min-height: 28px; display: block; width: 100%; border: 1px solid transparent; -webkit-user-select: text; user-select: text; }
-    .m-notes-cell:empty:before { content: 'Tap to add notes\2026'; color: #bbb; font-style: italic; pointer-events: none; }
-    .m-notes-cell:focus { border-color: var(--blue); background: white; box-shadow: 0 0 0 2px rgba(47,84,150,0.12); }
-    .map-toggle-btn { display: none; align-items: center; gap: 8px; padding: 10px 16px; background: white; border: none; border-bottom: 1px solid var(--border); width: 100%; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--blue); text-align: left; }
-    .map-toggle-icon { font-size: 14px; transition: transform 0.2s; display: inline-block; }
-    .map-toggle-btn.collapsed .map-toggle-icon { transform: rotate(-90deg); }
-    @media (max-width: 768px) {
-      .header,.controls,.kevin-section,.map-legend,.cards-wrap { padding-left: 12px; padding-right: 12px; }
-      .stats-bar { padding: 12px 16px; }
-      .table-wrap { display: none !important; }
-      .cards-wrap { display: block !important; }
-      .map-toggle-btn { display: flex; }
-      #map { height: 300px; }
-    }
-    @supports (-webkit-touch-callout: none) {
-      @media screen and (max-device-width: 768px) {
-        .table-wrap { display: none !important; }
-        .cards-wrap { display: block !important; }
-        .map-toggle-btn { display: flex; }
-        #map { display: none; }
-        .map-legend { display: none; }
-      }
-    }
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 2000; display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 20px 12px; }
-    .modal-box { background: var(--bg-surface); border-radius: 14px; width: 100%; max-width: 700px; margin: auto; box-shadow: 0 8px 40px var(--shadow); overflow: hidden; }
-    .modal-header { background: linear-gradient(135deg, var(--blue), #1a3a6e); color: white; padding: 18px 24px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-    .modal-header h2 { font-size: 17px; font-weight: 700; margin: 0; line-height: 1.3; }
-    .modal-header-sub { font-size: 12px; opacity: 0.8; margin-top: 2px; }
-    .modal-close { background: none; border: none; color: white; font-size: 26px; cursor: pointer; line-height: 1; opacity: 0.8; flex-shrink: 0; padding: 0 4px; }
-    .modal-close:hover { opacity: 1; }
-    .modal-body { max-height: calc(100vh - 160px); overflow-y: auto; }
-    .tab-bar { display: flex; border-bottom: 2px solid var(--border); background: var(--gray); overflow-x: auto; }
-    .tab-btn { padding: 10px 14px; font-size: 11px; font-weight: 700; color: var(--text-muted); background: none; border: none; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; flex-shrink: 0; }
-    .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); background: white; }
-    .tab-pane { display: none; }
-    .tab-pane.active { display: block; }
-    .modal-section { padding: 14px 20px; border-bottom: 1px solid #f0f0f0; }
-    .modal-section:last-child { border-bottom: none; }
-    .modal-section-title { font-size: 12px; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
-    .cl-progress { font-size: 11px; color: var(--text-muted); font-weight: 400; text-transform: none; letter-spacing: 0; }
-    .checklist-item { display: flex; align-items: flex-start; gap: 10px; padding: 5px 0; font-size: 13px; line-height: 1.4; cursor: pointer; }
-    .checklist-item input[type=checkbox] { margin-top: 2px; width: 15px; height: 15px; accent-color: var(--blue); flex-shrink: 0; cursor: pointer; }
-    .checklist-item span { flex: 1; }
-    .checklist-item.checked span { color: #aaa; text-decoration: line-through; }
-    .modal-footer { padding: 12px 20px; background: var(--bg-surface); border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; align-items: center; }
-    .modal-footer-left { margin-right: auto; font-size: 12px; color: var(--text-muted); }
-    .btn-primary { padding: 8px 18px; background: var(--blue); color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
-    .btn-secondary { padding: 8px 18px; background: white; color: var(--text); border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
-    .btn-danger { padding: 8px 18px; background: white; color: #dc3545; border: 1px solid #dc3545; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
-    .score-category { padding: 14px 20px; border-bottom: 1px solid #f0f0f0; }
-    .score-cat-header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
-    .score-cat-title { font-size: 13px; font-weight: 700; color: var(--blue); flex: 1; }
-    .score-cat-avg { font-size: 18px; font-weight: 800; color: var(--blue); min-width: 36px; text-align: right; }
-    .score-cat-weight-row { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; font-size: 12px; color: var(--text-muted); }
-    .weight-input { width: 52px; padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; text-align: center; }
-    .score-criterion { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 13px; }
-    .score-criterion label { flex: 1; min-width: 0; color: var(--text); }
-    .score-dots { display: flex; gap: 3px; }
-    .score-dot { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; background: white; font-size: 11px; font-weight: 700; color: var(--text-muted); display: flex; align-items: center; justify-content: center; transition: all 0.1s; flex-shrink: 0; }
-    .score-dot:hover { border-color: var(--blue); color: var(--blue); }
-    .score-dot.active { border-color: var(--blue); background: var(--blue); color: white; }
-    .score-dot.na-dot { border-radius: 6px; width: 30px; font-size: 9px; letter-spacing: 0.5px; }
-    .score-dot.na-dot.active { background: #aaa; border-color: #aaa; }
-    .score-result-bar { padding: 16px 20px; background: var(--gray); border-top: 2px solid var(--border); }
-    .score-total-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
-    .score-total-num { font-size: 42px; font-weight: 900; color: var(--blue); line-height: 1; }
-    .score-total-denom { font-size: 18px; color: var(--text-muted); font-weight: 400; }
-    .score-total-label { font-size: 13px; color: var(--text-muted); }
-    .score-breakdown { display: flex; gap: 8px; flex-wrap: wrap; }
-    .score-cat-chip { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 10px; }
-    .chip-loc { background: #dbeafe; color: #1e40af; }
-    .chip-layout { background: #dcfce7; color: #15803d; }
-    .chip-condition { background: #fef9c3; color: #854d0e; }
-    .chip-financial { background: #fce7f3; color: #9d174d; }
-    .weight-warning { font-size: 11px; color: #dc3545; margin-left: 6px; display: none; }
-    .normalize-btn { margin-left: 6px; padding: 2px 8px; font-size: 11px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
-    .hood-group-row td { background: var(--blue-light) !important; color: var(--blue); font-weight: 700; font-size: 13px; padding: 6px 12px; letter-spacing: 0.3px; }
-    [data-theme="dark"] .hood-group-row td { background: var(--blue-light) !important; color: #93c5fd; }
-    .m-hood-group-header { background: var(--blue-light); color: var(--blue); font-weight: 700; font-size: 12px; padding: 8px 16px; margin: 8px 0 4px; border-radius: 6px; letter-spacing: 0.3px; }
-    .score-tbl { display: inline-block; min-width: 38px; padding: 3px 9px; border-radius: 10px; font-size: 12px; font-weight: 700; text-align: center; cursor: pointer; }
-    .score-hi { background: #C6EFCE; color: #1a7a3a; }
-    .score-mid { background: #FFE699; color: #8a6d00; }
-    .score-lo { background: #FFC7CE; color: #9c0006; }
-    .score-none { background: #f0f0f0; color: #999; font-size: 11px; }
-    .cl-tbl { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; background: #e8daef; color: #6c3483; border-radius: 10px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
-    .cl-tbl:hover { background: #d7bde2; }
-    .cl-tbl-done { background: #C6EFCE; color: #1a7a3a; }
-    .action-btns { display: flex; flex-direction: column; gap: 4px; min-width: 80px; }
-    /* PIN GATE */
-    #pin-gate { position: fixed; inset: 0; background: linear-gradient(135deg, var(--blue), #1a3a6e); z-index: 9999; display: flex; align-items: center; justify-content: center; }
-    .pin-box { background: white; border-radius: 16px; padding: 40px 32px; text-align: center; box-shadow: 0 8px 40px rgba(0,0,0,0.3); max-width: 340px; width: 90%; }
-    .pin-box h1 { font-size: 22px; color: var(--blue); margin-bottom: 6px; }
-    .pin-box p { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
-    .pin-input { width: 160px; padding: 14px; font-size: 28px; text-align: center; letter-spacing: 12px; border: 2px solid var(--border); border-radius: 10px; font-family: inherit; }
-    .pin-input:focus { border-color: var(--blue); outline: none; box-shadow: 0 0 0 3px rgba(47,84,150,0.2); }
-    .pin-submit { display: block; width: 160px; margin: 16px auto 0; padding: 12px; background: var(--blue); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; }
-    .pin-submit:hover { background: #1a3a6e; }
-    .pin-error { color: #dc3545; font-size: 13px; margin-top: 12px; min-height: 20px; }
-    .pin-loading { display: none; margin-top: 12px; color: var(--text-muted); font-size: 13px; }
-    #tracker-app { display: none; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Napa Valley Apr 15-19</title>
+<style>
+  :root {
+    --wine: #722F37;
+    --wine-light: #9B4D55;
+    --gold: #C4A35A;
+    --green: #2D8A4E;
+    --orange: #D4840A;
+    --red: #C0392B;
+    --bg: #FAF8F5;
+    --card: #FFFFFF;
+    --text: #2C2C2C;
+    --muted: #888;
+    --border: #E8E4DF;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 0 0 100px 0;
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    background: linear-gradient(135deg, var(--wine), var(--wine-light));
+    color: white;
+    padding: 48px 20px 24px;
+    text-align: center;
+  }
+  header h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+  header p { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+  .quick-ref {
+    margin: 16px;
+    background: var(--card);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .quick-ref h2 { font-size: 14px; color: var(--wine); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .quick-ref-item { font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .quick-ref-item:last-child { border-bottom: none; }
+  .quick-ref-item a { color: var(--wine); text-decoration: none; font-weight: 600; }
+  .quick-ref-item .label { color: var(--muted); }
+  .day-card {
+    margin: 16px;
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .day-header {
+    padding: 16px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .day-header:active { background: #f5f0eb; }
+  .day-title { font-size: 15px; font-weight: 700; }
+  .day-subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .day-chevron { font-size: 18px; color: var(--muted); transition: transform 0.2s; }
+  .day-card.open .day-chevron { transform: rotate(180deg); }
+  .day-body { display: none; padding: 0 16px 16px; }
+  .day-card.open .day-body { display: block; }
+  .day-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .tag-drive { background: #EBF0F5; color: #3B6B9E; }
+  .tag-driver { background: #F5EBF5; color: #8E3B8E; }
+  .tag-walk { background: #EBF5EB; color: var(--green); }
+  .item {
+    display: flex;
+    align-items: flex-start;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 10px;
+  }
+  .item:last-child { border-bottom: none; }
+  .item input[type="checkbox"] {
+    margin-top: 3px;
+    width: 20px;
+    height: 20px;
+    accent-color: var(--wine);
+    flex-shrink: 0;
+  }
+  .item-content { flex: 1; min-width: 0; }
+  .item-time { font-size: 12px; font-weight: 700; color: var(--wine); }
+  .item-name { font-size: 14px; font-weight: 600; margin-top: 1px; }
+  .item-name a { color: inherit; text-decoration: none; border-bottom: 1px dashed var(--border); }
+  .item-detail { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: 4px;
+  }
+  .badge-booked { background: #E8F5E9; color: var(--green); }
+  .badge-walkin { background: #FFF3E0; color: var(--orange); }
+  .badge-todo { background: #FFEBEE; color: var(--red); }
+  .travel-sep {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .travel-sep::before, .travel-sep::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--wine-light);
+    padding: 12px 0 4px;
+  }
+  .progress-bar {
+    height: 3px;
+    background: rgba(255,255,255,0.2);
+    margin-top: 12px;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--gold);
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+</style>
 </head>
 <body>
 
-<!-- PIN GATE -->
-<div id="pin-gate">
-  <div class="pin-box">
-    <h1>Home Search Tracker</h1>
-    <p>West Town / West Loop</p>
-    <input type="password" id="pin-input" class="pin-input" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="----" autocomplete="off">
-    <button class="pin-submit" id="pin-submit" onclick="checkPin()">Enter</button>
-    <div class="pin-error" id="pin-error"></div>
-    <div class="pin-loading" id="pin-loading">Connecting...</div>
-  </div>
+<header>
+  <h1>NAPA VALLEY</h1>
+  <p>Jugal & Rupali &middot; April 15&ndash;19, 2026</p>
+  <div class="progress-bar"><div class="progress-fill" id="progress" style="width:0%"></div></div>
+</header>
+
+<!-- QUICK REFERENCE -->
+<div class="quick-ref">
+  <h2>Quick Reference</h2>
+  <div class="quick-ref-item"><span>Westin Verasa (Wed)</span><a href="https://maps.apple.com/?q=Westin+Verasa+Napa">Map</a></div>
+  <div class="quick-ref-item"><span>Bardessono (Thu-Sun)</span><a href="https://maps.apple.com/?q=Bardessono+Hotel+Yountville">Map</a></div>
+  <div class="quick-ref-item"><span>Bardessono Concierge</span><a href="tel:7072046000">707-204-6000</a></div>
+  <div class="quick-ref-item"><span class="label">Still needs booking:</span></div>
+  <div class="quick-ref-item"><span>Odette Estate (Thu)</span><span class="badge badge-todo">NOT BOOKED</span></div>
+  <div class="quick-ref-item"><span>Muir Woods parking</span><span class="badge badge-todo">BOOK NOW</span></div>
 </div>
 
-<!-- MAIN TRACKER (hidden until PIN verified) -->
-<div id="tracker-app">
-  <div class="header" style="position:relative">
-    <h1>Home Search Tracker</h1>
-    <p>West Town / West Loop — Chicago</p>
-    <button id="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode" style="position:absolute;top:20px;right:24px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;border-radius:8px;padding:6px 12px;font-size:18px;cursor:pointer;line-height:1">🌙</button>
+<!-- DAY PLACEHOLDERS -->
+<div id="day-wed">
+<div class="day-card">
+  <div class="day-header" onclick="toggleDay(this)">
+    <div>
+      <div class="day-title">Wed Apr 15 <span class="day-tag tag-drive">DRIVE</span></div>
+      <div class="day-subtitle">Arrival & Downtown Napa</div>
+    </div>
+    <div class="day-chevron">&#9662;</div>
   </div>
-
-  <div class="stats-bar">
-    <div class="stat">
-      <div class="stat-val" id="stat-total">0</div>
-      <div class="stat-label">Total</div>
-    </div>
-    <div class="stat">
-      <div class="stat-val" id="stat-active">0</div>
-      <div class="stat-label">Active</div>
-    </div>
-    <div class="stat">
-      <div class="stat-val" id="stat-toured">0</div>
-      <div class="stat-label">Toured</div>
-    </div>
-    <div class="stat">
-      <div class="stat-val" id="stat-scored">0</div>
-      <div class="stat-label">Scored</div>
-    </div>
-    <div class="stat">
-      <div class="stat-val" id="stat-updated" style="font-size:13px">—</div>
-      <div class="stat-label">Synced</div>
-    </div>
-  </div>
-
-  <div class="view-tab-bar">
-    <button class="view-tab active" id="tab-properties" onclick="setView('properties')">🏠 Properties</button>
-    <button class="view-tab" id="tab-scores"     onclick="setView('scores')">📊 Score Sheet</button>
-    <button class="view-tab" id="tab-checklist"  onclick="setView('checklist')">✅ Checklist</button>
-  </div>
-
-  <button class="map-toggle-btn collapsed" onclick="toggleMap()">
-    <span class="map-toggle-icon">▶</span> <span>Map</span>
-  </button>
-
-  <div id="map"></div>
-
-  <div class="map-legend">
-    <div><span class="legend-dot" style="background:#C6EFCE;"></span> Active / New</div>
-    <div><span class="legend-dot" style="background:#FFE699;"></span> Contingent</div>
-    <div><span class="legend-dot" style="background:#ffe0cc;"></span> Pending</div>
-    <div><span class="legend-dot" style="background:#FFC7CE;"></span> No / Passed</div>
-    <div><span class="legend-dot" style="background:#e8daef;"></span> Private</div>
-  </div>
-
-  <div class="controls">
-    <div class="filter-group">
-      <label>Status</label>
-      <div class="multi-select">
-        <button class="ms-trigger" id="status-trigger" onclick="toggleMs('status')" aria-expanded="false" aria-haspopup="listbox">All Statuses</button>
-        <div class="ms-dropdown" id="status-dropdown">
-          <label class="ms-opt"><input type="checkbox" value="ACTV" data-field="status"> Active</label>
-          <label class="ms-opt"><input type="checkbox" value="NEW" data-field="status"> New</label>
-          <label class="ms-opt"><input type="checkbox" value="PRIV-ACTV" data-field="status"> Private (Active)</label>
-          <label class="ms-opt"><input type="checkbox" value="PRIV-CTG" data-field="status"> Private (Ctg)</label>
-          <label class="ms-opt"><input type="checkbox" value="CTG" data-field="status"> Contingent</label>
-          <label class="ms-opt"><input type="checkbox" value="PEND" data-field="status"> Pending</label>
-          <label class="ms-opt"><input type="checkbox" value="NO" data-field="status"> No</label>
-        </div>
+  <div class="day-body">
+    <div class="item">
+      <input type="checkbox" id="w1">
+      <div class="item-content">
+        <div class="item-time">3:00 PM</div>
+        <div class="item-name">Land SFO</div>
+        <div class="item-detail">Deplane, bags, Turo rental car pickup</div>
       </div>
     </div>
-    <div class="filter-group">
-      <label>Criteria Ready</label>
-      <div class="multi-select">
-        <button class="ms-trigger" id="criteria-trigger" onclick="toggleMs('criteria')" aria-expanded="false" aria-haspopup="listbox">All</button>
-        <div class="ms-dropdown" id="criteria-dropdown">
-          <label class="ms-opt"><input type="checkbox" value="YES" data-field="criteria"> YES</label>
-          <label class="ms-opt"><input type="checkbox" value="CTG" data-field="criteria"> CTG</label>
-          <label class="ms-opt"><input type="checkbox" value="PEND" data-field="criteria"> PEND</label>
-          <label class="ms-opt"><input type="checkbox" value="NO" data-field="criteria"> NO</label>
-        </div>
+    <div class="travel-sep">1 hr 10 min drive to Napa</div>
+    <div class="item">
+      <input type="checkbox" id="w2">
+      <div class="item-content">
+        <div class="item-time">6:30 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Westin+Verasa+Napa">Westin Verasa Napa</a></div>
+        <div class="item-detail">Check in, freshen up</div>
       </div>
     </div>
-    <div class="filter-group">
-      <label>Search</label>
-      <input type="text" id="search-input" class="search-input" placeholder="Address or neighborhood…" oninput="applyFilters()">
-    </div>
-    <button class="archive-toggle hiding" id="archive-toggle" onclick="toggleArchive()">Hide Archived</button>
-    <button class="archive-toggle" id="group-toggle" onclick="toggleGroupByHood()">Group by Hood</button>
-    <button class="reset-btn" onclick="resetFilters()">Reset Filters</button>
-  </div>
-
-  <!-- COMPARE BAR -->
-  <div class="compare-bar" id="compare-bar">
-    <span id="compare-bar-label">Compare 0 properties</span>
-    <button class="compare-bar-btn" onclick="openCompareModal()">Compare →</button>
-    <button class="compare-bar-clear" onclick="clearCompare()">Clear</button>
-  </div>
-
-  <div class="table-wrap">
-    <table id="tb">
-      <thead>
-        <tr>
-          <th class="c" title="Select to compare">±</th>
-          <th onclick="sort('n')">#<span class="sa">▼</span></th>
-          <th onclick="sort('addr')">Address<span class="sa">▼</span></th>
-          <th onclick="sort('hood')">Hood<span class="sa">▼</span></th>
-          <th onclick="sort('price')" style="text-align:right">Price<span class="sa">▼</span></th>
-          <th onclick="sort('beds')" class="c">BR<span class="sa">▼</span></th>
-          <th onclick="sort('status')">Status<span class="sa">▼</span></th>
-          <th onclick="sort('dom')" class="c">DOM<span class="sa">▼</span></th>
-          <th onclick="sort('listed')" class="c">Listed<span class="sa">▼</span></th>
-          <th onclick="sort('wt')" class="c">Walk<span class="sa">▼</span></th>
-          <th class="rank-col" onclick="sort('rank')" style="cursor:pointer">Rank<span class="sa">▼</span></th>
-          <th class="c" onclick="sort('score')" style="cursor:pointer">Score<span class="sa">▼</span></th>
-          <th class="c">Tour<span class="sa">▼</span></th>
-          <th class="c">Tour'd</th>
-          <th>Links</th>
-          <th>Notes<span class="sa">▼</span></th>
-          <th style="color:var(--blue)">Kevin</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-
-  <div class="mobile-sort-bar" id="mobile-sort-bar">
-    <span class="mobile-sort-label">Sort:</span>
-    <button class="msort-btn active" onclick="mobileSort('price', false, this)">Price ↓</button>
-    <button class="msort-btn" onclick="mobileSort('price', true, this)">Price ↑</button>
-    <button class="msort-btn" onclick="mobileSort('wt', true, this)">Walk</button>
-    <button class="msort-btn" onclick="mobileSort('rank', false, this)">Rank</button>
-    <button class="msort-btn" onclick="mobileSort('score', false, this)">Score</button>
-  </div>
-
-  <div class="cards-wrap" id="cards-wrap"></div>
-  <div id="empty-state-mobile">No properties match your filters</div>
-
-  <div class="kevin-section">
-    <div class="kevin-card">
-      <h2>Kevin Patel's Notes <span style="font-weight:400;font-size:14px;color:#6c757d">(3/22/2026)</span></h2>
-      <div class="kevin-note"><strong>754 N Bishop St #302</strong><p>Last unit remaining. Open house 3/22. Near Eckhart Park. PK's Kitchen walking distance. 11 min to Chicago Blue Line.</p></div>
-      <div class="kevin-note"><strong>668 N Kingsbury St #406/206</strong><p>Unit 206 also at $899K (owner paid $995K in 2018, selling since 2021 — wiggle room). Worth seeing if looking at 406.</p></div>
-      <div class="kevin-note"><strong>466 N Paulina St #301</strong><p>Unit 302 under contract (also $1.1M). Unit 303 closed at $1.1M on 1/4/2026.</p></div>
-      <div class="kevin-note"><strong>1363 W Hubbard St #1</strong><p>Kevin not a fan — close to Metra tracks (~187 ft). Looks great otherwise. Union Park ~10 min walk.</p></div>
-      <div class="kevin-note"><strong>867 N Marshfield Ave #2</strong><p>Good simplex in growing neighborhood. Less space but for 3bed/2bath in 1 mile radius, lower end of pricing.</p></div>
-      <div class="kevin-note"><strong>General Strategy</strong><p>Kevin sees the look/feel you're going for. Can't promise availability when ready to tour. Planning to discuss market changes and preparation.</p></div>
-    </div>
-  </div>
-
-  <div class="footer">Generated March 28, 2026 • Sources: Kevin Patel / connectMLS + Redfin email alerts</div>
-
-  <!-- BULK SHEETS -->
-  <div id="score-sheet"     style="display:none"></div>
-  <div id="checklist-sheet" style="display:none"></div>
-
-  <!-- COMPARE MODAL -->
-  <div id="compare-modal" class="modal-overlay" style="display:none" onclick="closeCompareModal(event)" role="dialog" aria-modal="true">
-    <div class="modal-box" onclick="event.stopPropagation()" style="padding:0">
-      <div class="modal-header">
-        <h2>Compare Properties</h2>
-        <button class="modal-close" onclick="closeCompareModal()">×</button>
-      </div>
-      <div id="compare-modal-body" style="padding:20px;overflow-x:auto"></div>
-    </div>
-  </div>
-
-  <!-- TOUR MODAL -->
-  <div id="tour-modal" class="modal-overlay" style="display:none" onclick="closeTourModal(event)" role="dialog" aria-modal="true" aria-labelledby="tour-modal-addr">
-    <div class="modal-box" onclick="event.stopPropagation()">
-      <div class="modal-header">
-        <div>
-          <h2 id="tour-modal-addr"></h2>
-          <div class="modal-header-sub" id="tour-modal-sub"></div>
-        </div>
-        <button class="modal-close" onclick="closeTourModal()">×</button>
-      </div>
-      <div class="tab-bar" id="tour-tab-bar"></div>
-      <div class="modal-body" id="tour-modal-body"></div>
-      <div class="modal-footer">
-        <button class="btn-secondary" onclick="closeTourModal()">Close</button>
+    <div class="travel-sep">5 min walk</div>
+    <div class="item">
+      <input type="checkbox" id="w3">
+      <div class="item-content">
+        <div class="item-time">7:30 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Oxbow+Public+Market+Napa">Oxbow Public Market</a></div>
+        <div class="item-detail">Browse, grab a snack</div>
       </div>
     </div>
-  </div>
-
-  <!-- SCORE MODAL -->
-  <div id="score-modal" class="modal-overlay" style="display:none" onclick="closeScoreModal(event)" role="dialog" aria-modal="true" aria-labelledby="score-modal-addr">
-    <div class="modal-box" onclick="event.stopPropagation()">
-      <div class="modal-header">
-        <div>
-          <h2 id="score-modal-addr"></h2>
-          <div class="modal-header-sub" id="score-modal-sub"></div>
-        </div>
-        <button class="modal-close" onclick="closeScoreModal()">×</button>
+    <div class="travel-sep">15 min walk</div>
+    <div class="item">
+      <input type="checkbox" id="w4">
+      <div class="item-content">
+        <div class="item-time">8:15 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Morimoto+Napa">Morimoto</a></div>
+        <div class="item-detail">Dinner reservation</div>
+        <div><span class="badge badge-booked">BOOKED 8:15 PM &middot; OpenTable</span></div>
       </div>
-      <div class="modal-body" id="score-modal-body"></div>
-      <div class="modal-footer">
-        <button class="btn-secondary" onclick="closeScoreModal()">Close</button>
+    </div>
+    <div class="travel-sep">15 min walk back to Westin</div>
+  </div>
+</div>
+</div>
+<div id="day-thu">
+<div class="day-card">
+  <div class="day-header" onclick="toggleDay(this)">
+    <div>
+      <div class="day-title">Thu Apr 16 <span class="day-tag tag-drive">DRIVE</span></div>
+      <div class="day-subtitle">Southern Napa &rarr; Yountville</div>
+    </div>
+    <div class="day-chevron">&#9662;</div>
+  </div>
+  <div class="day-body">
+    <div class="item">
+      <input type="checkbox" id="t1">
+      <div class="item-content">
+        <div class="item-time">10:15 AM</div>
+        <div class="item-name">Leave Westin Verasa</div>
+      </div>
+    </div>
+    <div class="travel-sep">15 min drive south</div>
+    <div class="item">
+      <input type="checkbox" id="t2">
+      <div class="item-content">
+        <div class="item-time">10:30 AM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Domaine+Carneros+Napa">Domaine Carneros</a></div>
+        <div class="item-detail">Salon des R&ecirc;ves &mdash; sparkling + oysters ($99/pp)</div>
+        <div><span class="badge badge-booked">BOOKED 10:30 AM &middot; Tock (non-refundable)</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">20 min north on Silverado Trail</div>
+    <div class="item">
+      <input type="checkbox" id="t3">
+      <div class="item-content">
+        <div class="item-time">12:20 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Odette+Estate+Winery+Napa">Odette Estate</a></div>
+        <div class="item-detail">Stags Leap Cab + cheese pairings</div>
+        <div><span class="badge badge-todo">NOT BOOKED &middot; Accepts walk-ins</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">8 min drive west</div>
+    <div class="item">
+      <input type="checkbox" id="t4">
+      <div class="item-content">
+        <div class="item-time">2:10 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Bardessono+Hotel+Yountville">Bardessono Hotel</a></div>
+        <div class="item-detail">Check in, explore Yountville</div>
+      </div>
+    </div>
+    <div class="travel-sep">4 min walk</div>
+    <div class="item">
+      <input type="checkbox" id="t5">
+      <div class="item-content">
+        <div class="item-time">7:00 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Ad+Hoc+Yountville">Ad Hoc</a></div>
+        <div class="item-detail">Thomas Keller family-style set menu</div>
+        <div><span class="badge badge-booked">BOOKED 7:00 PM &middot; Resy</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">4 min walk back to Bardessono</div>
+  </div>
+</div>
+</div>
+<div id="day-fri">
+<div class="day-card">
+  <div class="day-header" onclick="toggleDay(this)">
+    <div>
+      <div class="day-title">Fri Apr 17 <span class="day-tag tag-driver">PRIVATE DRIVER</span></div>
+      <div class="day-subtitle">Rutherford &rarr; Calistoga &rarr; St. Helena</div>
+    </div>
+    <div class="day-chevron">&#9662;</div>
+  </div>
+  <div class="day-body">
+    <div class="item">
+      <input type="checkbox" id="f1">
+      <div class="item-content">
+        <div class="item-time">10:30 AM</div>
+        <div class="item-name">Driver picks up at Bardessono</div>
+      </div>
+    </div>
+    <div class="travel-sep">12 min north on Hwy 29</div>
+    <div class="item">
+      <input type="checkbox" id="f2">
+      <div class="item-content">
+        <div class="item-time">10:45 AM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Cakebread+Cellars+Rutherford">Cakebread Cellars</a></div>
+        <div class="item-detail">Food & wine pairing, Rutherford</div>
+        <div><span class="badge badge-booked">BOOKED 10:45 AM &middot; Tock</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">12 min north</div>
+    <div class="item">
+      <input type="checkbox" id="f3">
+      <div class="item-content">
+        <div class="item-time">12:15 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Auberge+du+Soleil+Rutherford">Auberge du Soleil</a></div>
+        <div class="item-detail">Michelin lunch on the terrace</div>
+        <div><span class="badge badge-booked">BOOKED 12:15 PM &middot; Tock</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">20 min north to Calistoga</div>
+    <div class="item">
+      <input type="checkbox" id="f4">
+      <div class="item-content">
+        <div class="item-time">2:45 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Sterling+Vineyards+Calistoga">Sterling Vineyards</a></div>
+        <div class="item-detail">Gondola to hilltop, panoramic views, 5 tastings</div>
+        <div><span class="badge badge-booked">BOOKED 2:45 PM &middot; Tock</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">15 min south to St. Helena</div>
+    <div class="item">
+      <input type="checkbox" id="f5">
+      <div class="item-content">
+        <div class="item-time">4:45 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Main+Street+St+Helena+CA">Main Street St. Helena</a></div>
+        <div class="item-detail">Stroll boutiques, Hartford House, coffee</div>
+      </div>
+    </div>
+    <div class="travel-sep">8 min walk</div>
+    <div class="item">
+      <input type="checkbox" id="f6">
+      <div class="item-content">
+        <div class="item-time">6:45 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Charter+Oak+St+Helena">Charter Oak</a></div>
+        <div class="item-detail">Cheeseburger, garden veg, pork jowl skewers</div>
+        <div><span class="badge badge-booked">BOOKED 6:45 PM &middot; Resy</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">18 min south on Hwy 29 &rarr; Bardessono ~9:05 PM</div>
+  </div>
+</div>
+</div>
+<div id="day-sat">
+<div class="day-card">
+  <div class="day-header" onclick="toggleDay(this)">
+    <div>
+      <div class="day-title">Sat Apr 18 <span class="day-tag tag-walk">ALL WALKABLE</span></div>
+      <div class="day-subtitle">Yountville Local Day + Spa</div>
+    </div>
+    <div class="day-chevron">&#9662;</div>
+  </div>
+  <div class="day-body">
+    <div class="item">
+      <input type="checkbox" id="s1">
+      <div class="item-content">
+        <div class="item-time">11:00 AM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Stewart+Cellars+Yountville">Stewart Cellars</a></div>
+        <div class="item-detail">NOMAD Cab, Cab Library (4.9 stars)</div>
+        <div><span class="badge badge-booked">BOOKED 11:00 AM &middot; Tock</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">2 min walk</div>
+    <div class="item">
+      <input type="checkbox" id="s2">
+      <div class="item-content">
+        <div class="item-time">12:35 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Lucy+Restaurant+Yountville">Lucy at Bardessono</a></div>
+        <div class="item-detail">Farm-to-fork California, organic garden ingredients</div>
+        <div><span class="badge badge-walkin">WALK-IN / Ask concierge</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">3 min walk</div>
+    <div class="item">
+      <input type="checkbox" id="s3">
+      <div class="item-content">
+        <div class="item-time">1:50 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Priest+Ranch+Yountville">Priest Ranch</a></div>
+        <div class="item-detail">Somerston Estate wines, rooftop terrace, cheese & chocolate pairings. Open 12&ndash;7 PM.</div>
+        <div><span class="badge badge-walkin">WALK-IN FRIENDLY</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">3 min walk back to Bardessono</div>
+    <div class="item">
+      <input type="checkbox" id="s4">
+      <div class="item-content">
+        <div class="item-time">3:30 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Bardessono+Hotel+Yountville">Bardessono B Spa</a></div>
+        <div class="item-detail">Yountville Signature Experience</div>
+        <div><span class="badge badge-walkin">BOOK AT CHECK-IN &middot; 707-204-6000</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">2 min walk</div>
+    <div class="item">
+      <input type="checkbox" id="s5">
+      <div class="item-content">
+        <div class="item-time">5:15 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Clementine+Yountville">Clementine</a></div>
+        <div class="item-detail">Pre-dinner cocktails & light bites</div>
+      </div>
+    </div>
+    <div class="travel-sep">1 min walk</div>
+    <div class="item">
+      <input type="checkbox" id="s6">
+      <div class="item-content">
+        <div class="item-time">7:00 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Bottega+Napa+Valley+Yountville">Bottega Napa Valley</a></div>
+        <div class="item-detail">Italian &mdash; short ribs, lobster risotto</div>
+        <div><span class="badge badge-booked">BOOKED 7:45 PM &middot; OpenTable</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">2 min walk back to Bardessono</div>
+  </div>
+</div>
+</div>
+<div id="day-sun">
+<div class="day-card">
+  <div class="day-header" onclick="toggleDay(this)">
+    <div>
+      <div class="day-title">Sun Apr 19 <span class="day-tag tag-drive">DRIVE</span></div>
+      <div class="day-subtitle">Muir Woods & Departure</div>
+    </div>
+    <div class="day-chevron">&#9662;</div>
+  </div>
+  <div class="day-body">
+    <div class="item">
+      <input type="checkbox" id="u1">
+      <div class="item-content">
+        <div class="item-time">7:30 AM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Bouchon+Bakery+Yountville">Bouchon Bakery</a></div>
+        <div class="item-detail">Pastries & coffee for the road</div>
+      </div>
+    </div>
+    <div class="item">
+      <input type="checkbox" id="u2">
+      <div class="item-content">
+        <div class="item-time">8:00 AM</div>
+        <div class="item-name">Check out of Bardessono</div>
+      </div>
+    </div>
+    <div class="travel-sep">1 hr 15 min via Hwy 29 S &rarr; 121 &rarr; 101 S</div>
+    <div class="item">
+      <input type="checkbox" id="u3">
+      <div class="item-content">
+        <div class="item-time">9:30 AM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Muir+Woods+National+Monument">Muir Woods</a></div>
+        <div class="item-detail">Reserved 9:30 AM parking ($10). Creek Trail (~1 hr)</div>
+        <div><span class="badge badge-todo">BOOK PARKING &middot; gomuirwoods.com</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">35 min via 101 S &rarr; 380</div>
+    <div class="item">
+      <input type="checkbox" id="u4">
+      <div class="item-content">
+        <div class="item-time">11:35 AM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=San+Francisco+International+Airport">Arrive SFO</a></div>
+        <div class="item-detail">Drop rental car, lunch at terminal</div>
+      </div>
+    </div>
+    <div class="item">
+      <input type="checkbox" id="u5">
+      <div class="item-content">
+        <div class="item-time">6:25 PM</div>
+        <div class="item-name">Flight departs</div>
+        <div class="item-detail">Big buffer &mdash; arrive ~5 hrs early</div>
       </div>
     </div>
   </div>
+</div>
 </div>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyAKzsJnzwF893IZiSsAKRyAG2bD-0rJwwY",
-  authDomain: "home-tracker-4a4f2.firebaseapp.com",
-  databaseURL: "https://home-tracker-4a4f2-default-rtdb.firebaseio.com",
-  projectId: "home-tracker-4a4f2",
-  storageBucket: "home-tracker-4a4f2.firebasestorage.app",
-  messagingSenderId: "43212958169",
-  appId: "1:43212958169:web:7a7d80c133ab89dae211c8"
-};
-
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const trackerRef = db.ref('tracker');
-const configRef  = db.ref('config');
-
-// DATA
-const L_DATA = [
-  {n:1,  addr:"1107 W Chestnut St Unit 1W",   hood:"West Town",       zip:"60642", price:950000,  beds:3, baths:2.5, sqft:2500, type:"Condo",        st:"NEW",      cr:"YES",  listed:"2026-03-26", notes:"Built 2020. $240 HOA. Kevin: Interested.",                       rf:"https://www.redfin.com/IL/Chicago/1107-W-Chestnut-St-60642/unit-1W/home/",         zl:"https://www.zillow.com/homes/1107-W-Chestnut-St-Unit-1W-Chicago-IL-60642_rb/",      lat:41.8983, lon:-87.6558},
-  {n:2,  addr:"1154 W Ohio St Unit 201",       hood:"River West",      zip:"60642", price:749000,  beds:3, baths:2.5, sqft:null, type:"Condo",        st:"PRIV-ACTV",cr:"YES",  listed:null, notes:"New construction.",                                              rf:"https://www.redfin.com/IL/Chicago/1154-W-Ohio-St-60642/unit-201/home/108979777",                                                                                   zl:"https://www.zillow.com/homes/1154-W-Ohio-St-Unit-201-Chicago-IL-60642_rb/",         lat:41.8919, lon:-87.6567},
-  {n:3,  addr:"1150 W Hubbard St Unit 1E",     hood:"Fulton Market",   zip:"60642", price:999000,  beds:4, baths:2.5, sqft:3300, type:"Duplex Condo", st:"PRIV-ACTV",cr:"YES",  listed:"2026-03-31", notes:"2016 build. 3,300 sqft. Kevin: Interested.",                      rf:"https://www.redfin.com/IL/Chicago/1150-W-Hubbard-St-60642/unit-1E/home/104486542",                                                                                   zl:"https://www.zillow.com/homes/1150-W-Hubbard-St-Unit-1E-Chicago-IL-60642_rb/",       lat:41.8898, lon:-87.6565},
-  {n:4,  addr:"754 N Bishop St Unit 302",      hood:"West Town",       zip:"60642", price:899000,  beds:3, baths:2,   sqft:2500, type:"Condo",        st:"ACTV",     cr:"YES",  listed:"2026-03-20", notes:"Last unit. Near Eckhart Park, Blue Line. $248 HOA.",              rf:"https://www.redfin.com/IL/Chicago/754-N-Bishop-St-60642/unit-302/home/200164587",   zl:"https://www.zillow.com/homes/754-N-Bishop-St-Unit-302-Chicago-IL-60642_rb/",        lat:41.8953, lon:-87.6617},
-  {n:5,  addr:"525 N Peoria St",               hood:"River West",      zip:"60642", price:835000,  beds:3, baths:2.5, sqft:2300, type:"Townhouse",    st:"ACTV",     cr:"YES",  listed:"2026-03-17", notes:"3+ stories. $320 HOA.",                                           rf:"https://www.redfin.com/IL/Chicago/525-N-Peoria-St-60642/home/12697440",                                                                                   zl:"https://www.zillow.com/homes/525-N-Peoria-St-Chicago-IL-60642_rb/",                 lat:41.8912, lon:-87.6494},
-  {n:6,  addr:"855 N May St Unit G",           hood:"West Town",       zip:"60642", price:839900,  beds:3, baths:2.5, sqft:2605, type:"Townhouse",    st:"ACTV",     cr:"YES",  listed:null, notes:"St. Johns Park. $368 HOA. | ⚠️ Zillow shows Off Market 3/27 — check MLS manually", rf:"https://www.redfin.com/IL/Chicago/855-N-May-St-60642/unit-G/home/12715037",                                                                                   zl:"https://www.zillow.com/homes/855-N-May-St-Unit-G-Chicago-IL-60642_rb/",             lat:41.8972, lon:-87.6545},
-  {n:7,  addr:"650 N Morgan St Unit 202",      hood:"West Town",       zip:"60642", price:800000,  beds:3, baths:2,   sqft:1855, type:"Condo",        st:"ACTV",     cr:"YES",  listed:"2026-01-22", notes:"Caden James bldg. $513 HOA.", rf:"https://www.redfin.com/IL/Chicago/650-N-Morgan-St-60642/unit-202/home/171316707",                                                                                   zl:"https://www.zillow.com/homes/650-N-Morgan-St-Unit-202-Chicago-IL-60642_rb/",        lat:41.8935, lon:-87.6519},
-  {n:8,  addr:"210 N Halsted St Unit 4",       hood:"West Loop",       zip:"60661", price:869999,  beds:3, baths:2,   sqft:null, type:"Penthouse",    st:"ACTV",     cr:"YES",  listed:"2026-02-11", notes:"Fulton Market. $372 HOA. | ✅ $869,999 confirmed on Redfin 3/28 (MLS# 12566553). $929,900 was older MLS#.",                        rf:"https://www.redfin.com/IL/Chicago/210-N-Halsted-St-60661/unit-4/home/113043671",                                                                                   zl:"https://www.zillow.com/homes/210-N-Halsted-St-Unit-4-Chicago-IL-60661_rb/",         lat:41.8856, lon:-87.6470},
-  {n:9,  addr:"334 N Jefferson St Unit A",     hood:"West Loop",       zip:"60661", price:825000,  beds:3, baths:3,   sqft:2400, type:"Townhouse",    st:"ACTV",     cr:"YES",  listed:"2026-03-12", notes:"Kenzie Station. $100 HOA. Kevin: Not Interested. | ⚠️ Web search shows Unit A as rental only — verify for-sale status on MLS 3/28",                rf:"https://www.redfin.com/IL/Chicago/334-N-Jefferson-St-60661/unit-A/home/12648674",                                                                                   zl:"https://www.zillow.com/homes/334-N-Jefferson-St-Unit-A-Chicago-IL-60661_rb/",       lat:41.8878, lon:-87.6424},
-  {n:10, addr:"1363 W Hubbard St Unit 1",      hood:"West Loop",       zip:"60642", price:1050000, beds:3, baths:2.5, sqft:2000, type:"Duplex",       st:"ACTV",     cr:"YES",  listed:null, notes:"New const. $200 HOA. Near Metra tracks. | Price↓$25K to $1,050K (was $1,075K) confirmed on Redfin 3/28", rf:"https://www.redfin.com/IL/Chicago/1363-W-Hubbard-St-60642/unit-1/home/188194083",   zl:"https://www.zillow.com/homes/1363-W-Hubbard-St-Unit-1-Chicago-IL-60642_rb/",        lat:41.8898, lon:-87.6604},
-  {n:11, addr:"867 N Marshfield Ave Unit 2",   hood:"East Village",    zip:"60622", price:769900,  beds:3, baths:2,   sqft:null, type:"Condo",        st:"ACTV",     cr:"YES",  listed:null, notes:"Growing neighborhood. Lower-end pricing. | Status→CTG, Price↓$80K (was $850K) 3/27 | Status→ACTV (back on market) confirmed Redfin 3/28",  rf:"https://www.redfin.com/IL/Chicago/867-N-Marshfield-Ave-60622/unit-2/home/195589394",zl:"https://www.zillow.com/homes/867-N-Marshfield-Ave-Unit-2-Chicago-IL-60622_rb/",     lat:41.8974, lon:-87.6665},
-  {n:12, addr:"466 N Paulina St Unit 301",     hood:"West Town",       zip:"60622", price:1075000, beds:4, baths:3,   sqft:null, type:"Condo",        st:"ACTV",     cr:"YES",  listed:"2026-02-03", notes:"New const. Unit 302 under contract at $1.1M. | Price↓$25K to $1,075K (was $1.1M) confirmed Redfin 3/28",  rf:"https://www.redfin.com/IL/Chicago/466-N-Paulina-St-60622/unit-301/home/199981208",  zl:"https://www.zillow.com/homes/466-N-Paulina-St-Unit-301-Chicago-IL-60622_rb/",       lat:41.8903, lon:-87.6688},
-  {n:13, addr:"1537 W Pearson St #2",          hood:"West Town",       zip:"60642", price:1175000, beds:3, baths:2.5, sqft:2400, type:"Luxury Condo", st:"NEW",      cr:"YES",  listed:"2026-03-26", notes:"Private entrance, 12ft ceilings. $159 HOA.",                     rf:"https://www.redfin.com/IL/Chicago/1537-W-Pearson-St-60642/unit-2/home/185207658",   zl:"https://www.zillow.com/homes/1537-W-Pearson-St-Unit-2-Chicago-IL-60642_rb/",        lat:41.8976, lon:-87.6645},
-  {n:14, addr:"1527 W Pearson St",             hood:"West Town",       zip:"60642", price:1250000, beds:4, baths:3.5, sqft:3100, type:"Single Family", st:"ACTV",    cr:"YES",  listed:"2026-03-03", notes:"Open house 3/29. 2 garage spots. | Price↑$50K to $1,250K (was $1,199,990) confirmed Zillow 3/28", rf:"https://www.redfin.com/IL/Chicago/1527-W-Pearson-St-60642/home/14108768",                                                                                   zl:"https://www.zillow.com/homes/1527-W-Pearson-St-Chicago-IL-60642_rb/",               lat:41.8976, lon:-87.6643},
-  {n:15, addr:"1001 W Madison St #710",        hood:"West Loop",       zip:"60607", price:1099900, beds:3, baths:2.5, sqft:2400, type:"Condo",        st:"ACTV",     cr:"YES",  listed:"2026-02-11", notes:"$1,151 HOA (high!). Garage.",                                    rf:"https://www.redfin.com/IL/Chicago/1001-W-Madison-St-60607/unit-710/home/12679540",                                                                                   zl:"https://www.zillow.com/homes/1001-W-Madison-St-Unit-710-Chicago-IL-60607_rb/",      lat:41.8817, lon:-87.6520},
-  {n:16, addr:"957 N Winchester Pkwy #1",      hood:"West Town",       zip:"60622", price:1299900, beds:4, baths:3.5, sqft:2800, type:"Townhouse",    st:"ACTV",     cr:"YES",  listed:null, notes:"$271 HOA. Garage. At price ceiling. | ⚠️ Could not verify on Zillow/Redfin — check MLS manually",                            rf:"",                                                                                   zl:"https://www.zillow.com/homes/957-N-Winchester-Pkwy-Unit-1-Chicago-IL-60622_rb/",    lat:41.8990, lon:-87.6744},
-  {n:17, addr:"2024 W LeMoyne St Unit 3W",     hood:"Wicker Park",     zip:"60622", price:975000,  beds:3, baths:2,   sqft:null, type:"Penthouse",    st:"PRIV-CTG", cr:"CTG",  listed:null, notes:"Luxury penthouse, rooftop deck. | ⚠️ Redfin shows sold Apr 2024 — verify still available",                                 rf:"https://www.redfin.com/IL/Chicago/2024-W-Le-Moyne-St-60622/unit-3W/home/171315920",                                                                                   zl:"https://www.zillow.com/homes/2024-W-LeMoyne-St-Unit-3W-Chicago-IL-60622_rb/",       lat:41.9090, lon:-87.6785},
-  {n:18, addr:"1203 W Augusta Blvd Unit 3N",   hood:"West Town",       zip:"60642", price:778000,  beds:3, baths:2,   sqft:1718, type:"Condo",        st:"CTG",      cr:"CTG",  listed:null, notes:"Elevator access. $472 HOA. | ⚠️ Appears off-market — search shows sold Aug 2021",                                      rf:"https://www.redfin.com/IL/Chicago/1203-W-Augusta-Blvd-60642/unit-3N/home/178673359",                                                                                   zl:"https://www.zillow.com/homes/1203-W-Augusta-Blvd-Unit-3N-Chicago-IL-60642_rb/",     lat:41.8997, lon:-87.6574},
-  {n:19, addr:"1518 W Cortez St Unit 3W",      hood:"West Town",       zip:"60642", price:875000,  beds:4, baths:3,   sqft:2800, type:"Duplex PH",    st:"CTG",      cr:"CTG",  listed:null, notes:"Oversized w/ outdoor spaces. $407 HOA. | ⚠️ Appears off-market — search shows sold Mar 2021",                          rf:"https://www.redfin.com/IL/Chicago/1518-W-Cortez-St-60642/unit-3W/home/26812505",                                                                                   zl:"https://www.zillow.com/homes/1518-W-Cortez-St-Unit-3W-Chicago-IL-60642_rb/",        lat:41.9003, lon:-87.6640},
-  {n:20, addr:"1432 W Erie St Unit 3R",        hood:"West Town",       zip:"60642", price:799900,  beds:3, baths:2.5, sqft:2080, type:"Duplex PH",    st:"CTG",      cr:"CTG",  listed:null, notes:"Newly redesigned. $571 HOA.",                                    rf:"https://www.redfin.com/IL/Chicago/1432-W-Erie-St-60642/unit-3R/home/12789090",                                                                                   zl:"https://www.zillow.com/homes/1432-W-Erie-St-Unit-3R-Chicago-IL-60642_rb/",          lat:41.8935, lon:-87.6622},
-  {n:21, addr:"678 N Peoria St Unit C",        hood:"River West",      zip:"60642", price:789000,  beds:3, baths:2.5, sqft:2182, type:"Townhouse",    st:"CTG",      cr:"CTG",  listed:null, notes:"Gated community. $250 HOA. | ⚠️ Appears off-market per search — verify with MLS | ✅ Confirmed CTG $789K on Zillow 3/28",                                     rf:"https://www.redfin.com/IL/Chicago/678-N-Peoria-St-60642/unit-C/home/14102612",                                                                                   zl:"https://www.zillow.com/homes/678-N-Peoria-St-Unit-C-Chicago-IL-60642_rb/",          lat:41.8940, lon:-87.6494},
-  {n:22, addr:"1406 W Ohio St Unit 3",         hood:"West Town",       zip:"60642", price:999999,  beds:3, baths:2,   sqft:2500, type:"Duplex PH",    st:"CTG",      cr:"CTG",  listed:"2026-03-03", notes:"$234 HOA.",                                                       rf:"https://www.redfin.com/IL/Chicago/1406-W-Ohio-St-60642/unit-3/home/18914047",                                                                                   zl:"https://www.zillow.com/homes/1406-W-Ohio-St-Unit-3-Chicago-IL-60642_rb/",           lat:41.8920, lon:-87.6615},
-  {n:23, addr:"2509 W Haddon Ave",             hood:"Ukrainian Village",zip:"60622", price:849900,  beds:3, baths:3,   sqft:null, type:"Single Family", st:"PEND",    cr:"PEND", listed:"2026-02-24", notes:"Brick, fully renovated. No HOA. | Status→PEND (was CTG) 3/27",  rf:"https://www.redfin.com/IL/Chicago/2509-W-Haddon-Ave-60622/home/13289120",                                                                                   zl:"https://www.zillow.com/homes/2509-W-Haddon-Ave-Chicago-IL-60622_rb/",               lat:41.9022, lon:-87.6881},
-  {n:24, addr:"754 N Bishop St Unit 306",      hood:"West Town",       zip:"60642", price:899000,  beds:3, baths:2,   sqft:1750, type:"Condo",        st:"PEND",     cr:"PEND", listed:null, notes:"New const. $248 HOA.",                                            rf:"",                                                                                   zl:"https://www.zillow.com/homes/754-N-Bishop-St-Unit-306-Chicago-IL-60642_rb/",        lat:41.8954, lon:-87.6617},
-  {n:25, addr:"754 N Bishop St Unit 206",      hood:"West Town",       zip:"60642", price:889000,  beds:3, baths:2,   sqft:1750, type:"Condo",        st:"PEND",     cr:"PEND", listed:"2026-03-04", notes:"New const. $242 HOA.",                                            rf:"",                                                                                   zl:"https://www.zillow.com/homes/754-N-Bishop-St-Unit-206-Chicago-IL-60642_rb/",        lat:41.8952, lon:-87.6617},
-  {n:26, addr:"668 N Kingsbury St Unit 206",   hood:"River North",     zip:"60654", price:899000,  beds:3, baths:2,   sqft:2500, type:"Condo",        st:"ACTV",     cr:"NO",   listed:"2026-02-11", notes:"$1,287 HOA. Owner paid $995K in 2018. Selling since 2021.",      rf:"https://www.redfin.com/IL/Chicago/668-N-Kingsbury-St-60654/unit-406/home/178677010", zl:"https://www.zillow.com/homes/668-N-Kingsbury-St-Unit-206-Chicago-IL-60654_rb/",     lat:41.8938, lon:-87.6385},
-  {n:27, addr:"501 N Clinton St Unit 903",     hood:"River North",     zip:"60654", price:1000000, beds:3, baths:3,   sqft:2355, type:"High-Rise",    st:"ACTV",     cr:"NO",   listed:null, notes:"$1,967 HOA. Kinzie Park.",                                       rf:"https://www.redfin.com/IL/Chicago/501-N-Clinton-St-60654/unit-903/home/12649732",                                                                                   zl:"https://www.zillow.com/homes/501-N-Clinton-St-Unit-903-Chicago-IL-60654_rb/",       lat:41.8908, lon:-87.6408},
-  {n:28, addr:"1500 W Grand Ave Unit 1E",      hood:"West Town",       zip:"60642", price:674900,  beds:3, baths:3,   sqft:null, type:"Condo",        st:"ACTV",     cr:"NO",   listed:"2026-03-23", notes:"Below $700K. $348 HOA.",                                         rf:"https://www.redfin.com/IL/Chicago/1500-W-Grand-Ave-60642/unit-1E/home/12629764",                                                                                   zl:"https://www.zillow.com/homes/1500-W-Grand-Ave-Unit-1E-Chicago-IL-60642_rb/",        lat:41.8912, lon:-87.6637},
-  {n:29, addr:"1036 N Paulina St #2",          hood:"Wicker Park",     zip:"60622", price:619000,  beds:2, baths:2,   sqft:null, type:"Condo",        st:"ACTV",     cr:"NO",   listed:null, notes:"Only 2 bed. $156 HOA. | ⚠️ Appears off-market — search shows sold Sep 2022",                                          rf:"https://www.redfin.com/IL/Chicago/1036-N-Paulina-St-60622/unit-2/home/14104909",                                                                                   zl:"https://www.zillow.com/homes/1036-N-Paulina-St-Unit-2-Chicago-IL-60622_rb/",        lat:41.9007, lon:-87.6688},
-  {n:30, addr:"1161 W Madison St Unit 4S",     hood:"West Loop",       zip:"60607", price:900000,  beds:2, baths:2,   sqft:1700, type:"Condo",        st:"ACTV",     cr:"NO",   listed:null, notes:"Only 2 bed. $283 HOA.",                                          rf:"https://www.redfin.com/IL/Chicago/1161-W-Madison-St-60607/unit-4S/home/12813538",                                                                                   zl:"https://www.zillow.com/homes/1161-W-Madison-St-Unit-4S-Chicago-IL-60607_rb/",       lat:41.8817, lon:-87.6556},
-  {n:31, addr:"1537 W Pearson St #2 (DUPLICATE of #13)", hood:"West Town", zip:"60642", price:1175000, beds:3, baths:2.5, sqft:2400, type:"Luxury Condo", st:"ACTV",    cr:"NO",   listed:null, notes:"Added by Jugal 3/24. | ⚠️ Duplicate of #13 — redf.in link resolves to 1537 W Pearson St #2. 3/27", rf:"https://redf.in/EWPnGi", zl:"", lat:41.8976, lon:-87.6645}
-];
-
-const CHECKLIST_SECTIONS = [
-  { id:'pre', title:'🔍 Pre-Tour Research', items:[
-    'Check flood zone on FEMA flood map',
-    'Research crime stats for the block / neighborhood',
-    'Look up school district ratings (Illinois Report Card)',
-    'Check permit history on Chicago data portal',
-    'Review full seller disclosure documents',
-    'Google Street View the block and surrounding streets',
-    'Review HOA meeting minutes & financials (condo)',
-    'Look up seller\'s original purchase price and year',
-    'Check for pending or recent special assessments',
-    'Review full price history and days on market',
-  ]},
-  { id:'loc', title:'📍 Location & Surroundings', items:[
-    'Walk the block in both directions before entering',
-    'Check street noise level at multiple windows',
-    'Note available street parking and ease of access',
-    'Identify nearest grocery / pharmacy / daily errands',
-    'Check nearest CTA L stop and bus routes',
-    'Observe neighbor upkeep and building conditions',
-    'Note any commercial neighbors (restaurant odors, loading docks)',
-    'Check alley and back of building condition',
-    'Assess general safety feel at this time of day',
-    'Look for active construction nearby that could impact life',
-  ]},
-  { id:'ext', title:'🏗️ Building Exterior & Common Areas', items:[
-    'Roof condition — any visible damage, sagging, or patches',
-    'Gutters and downspouts intact and clear',
-    'Foundation — no major cracks or water staining',
-    'Brick or siding in good condition',
-    'Windows — age, condition, double-pane?',
-    'Common areas and hallways clean and well-maintained',
-    'Elevator working and well-maintained (if applicable)',
-    'Parking / garage condition',
-    'Secure entry, intercom, and package delivery area',
-    'Trash, recycling, and storage areas organized',
-  ]},
-  { id:'int', title:'🛋️ Living Areas & Layout', items:[
-    'Natural light — which directions do windows face?',
-    'Window views — what do you actually see looking out?',
-    'Ceiling height feels comfortable and spacious',
-    'Floor condition — hardwood, tile, carpet',
-    'Walls — any cracks, staining, or visible patching',
-    'Adequate outlets in each room',
-    'Open windows — what noise do you hear from outside?',
-    'Can you hear neighbors through walls or ceiling?',
-    'Layout flows naturally for your daily life',
-    'Closet and storage space throughout feels sufficient',
-    'Could your furniture realistically fit and flow?',
-  ]},
-  { id:'kit', title:'🍳 Kitchen', items:[
-    'Counter space is adequate for your cooking habits',
-    'Cabinet quantity and condition',
-    'Appliance brands, ages, and condition (ask seller)',
-    'Run the sink — check water pressure and drainage',
-    'Ventilation: range hood working and vents outside',
-    'Pantry or additional food storage available',
-    'Garbage disposal working',
-    'Counter material quality (quartz, granite, laminate)',
-    'Enough natural light or task lighting',
-  ]},
-  { id:'bed', title:'🛏️ Bedrooms', items:[
-    'Primary bedroom fits a king bed plus furniture',
-    'Primary closet large enough for two people',
-    '2nd bedroom — adequate size and closet',
-    '3rd bedroom — adequate size and closet (if applicable)',
-    'Bedroom doors provide good sound privacy',
-    'Window placement allows for blackout curtains',
-    'Primary bedroom away from street noise (if possible)',
-  ]},
-  { id:'bath', title:'🚿 Bathrooms', items:[
-    'Run the shower — check water pressure and temperature',
-    'Fill the sink — check drainage speed',
-    'Hot water arrives within a reasonable time',
-    'Tile and grout in good condition (no cracking or mold)',
-    'Ventilation fan working',
-    'Vanity storage is adequate',
-    'No visible water damage around tub or shower',
-    'Enough bathrooms for your household',
-  ]},
-  { id:'sys', title:'⚙️ Systems & Mechanicals', items:[
-    'HVAC — ask age, brand, and last service date',
-    'Water heater — age and condition',
-    'Electrical panel — circuit breakers (not fuses), adequate capacity',
-    'Plumbing — copper or PEX? Any visible corrosion?',
-    'In-unit washer/dryer present (or hookups)',
-    'Basement / utility room accessible and dry',
-    'No signs of water intrusion, mold, or efflorescence',
-    'Sump pump present and working (if applicable)',
-    'Check cell signal strength throughout unit',
-    'Internet / cable infrastructure available',
-  ]},
-  { id:'out', title:'🌿 Outdoor Space', items:[
-    'Private deck, patio, or yard — size and condition',
-    'Rooftop deck — private or shared? Condition?',
-    'Sun exposure (east / south / west facing)',
-    'HOA rules allow outdoor furniture and grills',
-    'Outdoor space functional year-round (covered or enclosed?)',
-  ]},
-  { id:'qa', title:'❓ Questions to Ask', items:[
-    'Why is the seller selling?',
-    'How long have they owned it?',
-    'Any known defects or issues (required disclosures)?',
-    'What is included in the sale (appliances, fixtures, shelving)?',
-    'Any upcoming HOA special assessments?',
-    'What is the HOA reserve fund balance?',
-    'HOA rules on renting / short-term / Airbnb?',
-    'HOA rules on pets (size, breed)?',
-    'Were any renovations done — were permits pulled?',
-    'History of insurance claims on this unit?',
-    'Average monthly utility costs (heat, electric, water)?',
-    'Any other offers or active interest?',
-    'Is a home warranty being offered?',
-    'What\'s the building management like (self-managed or company)?',
-  ]},
-  { id:'gut', title:'💬 Post-Tour Gut Check', items:[
-    'Could you genuinely picture yourself living here?',
-    'Did anything feel "off" or surprise you negatively?',
-    'Does it match the listing photos and description?',
-    'What was the single best thing about this place?',
-    'What is your biggest concern?',
-    'How does it compare emotionally to other homes seen?',
-    'Would you be comfortable with the neighbors you observed?',
-    'If it went under contract tomorrow, would you regret not acting?',
-  ]},
-];
-
-const SCORE_CATEGORIES = [
-  { id:'loc', title:'📍 Location', chipClass:'chip-loc', defaultWeight:25, criteria:[
-    { id:'commute',    label:'Commute to Dyson (walk/transit)' },
-    { id:'safety',     label:'Neighborhood feel & safety' },
-    { id:'walkable',   label:'Walkability to daily needs' },
-    { id:'noise',      label:'Street / environmental noise level' },
-    { id:'trajectory', label:'Neighborhood long-term trajectory' },
-  ]},
-  { id:'layout', title:'🛋️ Layout & Space', chipClass:'chip-layout', defaultWeight:25, criteria:[
-    { id:'size',     label:'Overall size & flow for the price' },
-    { id:'bedrooms', label:'Bedroom sizes and count' },
-    { id:'storage',  label:'Storage & closet space' },
-    { id:'kitchen',  label:'Kitchen size & functionality' },
-    { id:'light',    label:'Natural light & views' },
-    { id:'outdoor',  label:'Outdoor space' },
-  ]},
-  { id:'condition', title:'🔧 Condition & Features', chipClass:'chip-condition', defaultWeight:25, criteria:[
-    { id:'overall',   label:'Overall condition & finish quality' },
-    { id:'kitchen_q', label:'Kitchen & appliance quality' },
-    { id:'baths',     label:'Bathroom quality' },
-    { id:'mechanicals',label:'Mechanicals / systems age & condition' },
-    { id:'laundry',   label:'In-unit laundry' },
-    { id:'parking',   label:'Parking / garage situation' },
-  ]},
-  { id:'financial', title:'💰 Financial Value', chipClass:'chip-financial', defaultWeight:25, criteria:[
-    { id:'price_val',  label:'Price vs. comparable sales (value)' },
-    { id:'hoa',        label:'HOA fees (1=very high, 5=low/none)' },
-    { id:'hoa_health', label:'HOA reserve health' },
-    { id:'taxes',      label:'Property tax load' },
-    { id:'move_in',    label:'Move-in ready (1=needs work, 5=turnkey)' },
-  ]},
-];
-
-// IN-MEMORY CACHE
-const _cache = {
-  ranks: {},
-  notes: {},
-  scores: {},
-  checklists: {},
-  listed: {},
-  weights: null,
-  toured: {},
-  priceHistory: {},
-  kevinNotes: {}
-};
-
-// LOAD FUNCTIONS
-function loadRank(n) { return _cache.ranks[n] || 0; }
-function loadNote(n) { return _cache.notes[n] !== undefined ? _cache.notes[n] : ''; }
-function loadScores(n) { return _cache.scores[n] || {}; }
-function loadChecklist(n) { return _cache.checklists[n] || {}; }
-function loadListed(n) {
-  if (_cache.listed[n] !== undefined) return _cache.listed[n];
-  const l = L_DATA.find(x => x.n === n);
-  return (l && l.listed) ? l.listed : '';
+function toggleDay(el) {
+  el.closest('.day-card').classList.toggle('open');
 }
-function loadWeights() {
-  if (_cache.weights) return _cache.weights;
-  const def = {};
-  SCORE_CATEGORIES.forEach(c => def[c.id] = c.defaultWeight);
-  return def;
-}
-
-// TOAST NOTIFICATION
-let _toastTimer;
-function showToast(msg, isError) {
-  const t = document.getElementById('toast');
-  if (!t) return;
-  t.textContent = msg;
-  t.className = 'toast show' + (isError ? ' error' : '');
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
-}
-
-// SAVE FUNCTIONS
-function saveRank(n, v) {
-  _cache.ranks[n] = v;
-  trackerRef.child('ranks/' + n).set(v).then(() => showToast('Saved ✓')).catch(e => { console.error('Save rank failed:', e); showToast('Save failed', true); });
-}
-function saveNote(n, v) {
-  _cache.notes[n] = v;
-  trackerRef.child('notes/' + n).set(v).then(() => showToast('Saved ✓')).catch(e => { console.error('Save note failed:', e); showToast('Save failed', true); });
-}
-function saveScores(n, scores) {
-  _cache.scores[n] = scores;
-  trackerRef.child('scores/' + n).set(scores).then(() => showToast('Saved ✓')).catch(e => { console.error('Save scores failed:', e); showToast('Save failed', true); });
-}
-function saveChecklist(n, checks) {
-  _cache.checklists[n] = checks;
-  trackerRef.child('checklists/' + n).set(checks).then(() => showToast('Saved ✓')).catch(e => { console.error('Save checklist failed:', e); showToast('Save failed', true); });
-}
-function saveListed(n, v) {
-  _cache.listed[n] = v;
-  trackerRef.child('listed/' + n).set(v).then(() => showToast('Saved ✓')).catch(e => { console.error('Save listed failed:', e); showToast('Save failed', true); });
-}
-function saveWeights(w) {
-  _cache.weights = w;
-  trackerRef.child('weights').set(w).then(() => showToast('Saved ✓')).catch(e => { console.error('Save weights failed:', e); showToast('Save failed', true); });
-}
-
-// TOURED & PRICE HISTORY FUNCTIONS
-function loadToured(n)    { return !!_cache.toured[n]; }
-function saveToured(n, v) {
-  _cache.toured[n] = v;
-  trackerRef.child('toured/' + n).set(v).then(() => showToast('Saved ✓')).catch(e => { console.error(e); showToast('Save failed', true); });
-}
-function toggleToured(n) {
-  const v = !loadToured(n);
-  saveToured(n, v);
-  document.querySelectorAll(`.toured-btn[data-n="${n}"]`).forEach(el => el.classList.toggle('active', v));
-  document.querySelectorAll(`.m-toured-wrap[data-n="${n}"]`).forEach(el => {
-    el.classList.toggle('active', v);
-    el.querySelector('.m-toured-text').textContent = v ? 'Toured' : 'Not toured';
+function saveState() {
+  const checks = {};
+  document.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    checks[cb.id] = cb.checked;
   });
-  calcStats();
+  localStorage.setItem('napa-itinerary', JSON.stringify(checks));
+  updateProgress();
 }
-function loadPriceHistory(n)  { return _cache.priceHistory[n] ? Object.values(_cache.priceHistory[n]) : []; }
-function priceHistoryBadge(n) {
-  const history = loadPriceHistory(n);
-  if (!history.length) return '';
-  const last = history[history.length - 1];
-  const diff  = (last.newPrice || 0) - (last.oldPrice || 0);
-  const arrow = diff < 0 ? '📉' : '📈';
-  return `<span class="price-hist" title="Was ${fmt(last.oldPrice)}">${arrow} was ${fmt(last.oldPrice)}</span>`;
-}
-
-// KEVIN NOTES
-function loadKevinNote(n) { return _cache.kevinNotes[n] !== undefined ? _cache.kevinNotes[n] : ''; }
-function saveKevinNote(n, v) {
-  _cache.kevinNotes[n] = v;
-  trackerRef.child('kevinNotes/' + n).set(v).then(() => showToast('Saved ✓')).catch(e => { console.error(e); showToast('Save failed', true); });
-}
-function saveKevinNoteFromEl(event) {
-  const el = event.target;
-  const n = parseInt(el.dataset.n);
-  if (isNaN(n)) return;
-  saveKevinNote(n, el.textContent);
-}
-
-// COMPARE
-const _compareSet = new Set();
-function toggleCompare(n) {
-  if (_compareSet.has(n)) {
-    _compareSet.delete(n);
-  } else if (_compareSet.size < 3) {
-    _compareSet.add(n);
-  } else {
-    showToast('Max 3 properties to compare', true);
-    // uncheck the box
-    document.querySelectorAll(`.compare-cb[data-n="${n}"]`).forEach(cb => cb.checked = false);
-    return;
-  }
-  updateCompareBtn();
-}
-function updateCompareBtn() {
-  const bar = document.getElementById('compare-bar');
-  const label = document.getElementById('compare-bar-label');
-  const count = _compareSet.size;
-  if (count >= 2) {
-    bar.classList.add('show');
-    label.textContent = `Compare ${count} propert${count === 1 ? 'y' : 'ies'}`;
-  } else {
-    bar.classList.remove('show');
-  }
-}
-function clearCompare() {
-  _compareSet.clear();
-  document.querySelectorAll('.compare-cb').forEach(cb => cb.checked = false);
-  updateCompareBtn();
-}
-function openCompareModal() {
-  document.getElementById('compare-modal-body').innerHTML = buildCompareHtml();
-  document.getElementById('compare-modal').style.display = 'flex';
-}
-function closeCompareModal(e) {
-  if (e && e.target.id !== 'compare-modal') return;
-  document.getElementById('compare-modal').style.display = 'none';
-}
-function removeFromCompare(n) {
-  _compareSet.delete(n);
-  document.querySelectorAll(`.compare-cb[data-n="${n}"]`).forEach(cb => cb.checked = false);
-  if (_compareSet.size < 2) {
-    document.getElementById('compare-modal').style.display = 'none';
-    updateCompareBtn();
-  } else {
-    document.getElementById('compare-modal-body').innerHTML = buildCompareHtml();
-    updateCompareBtn();
-  }
-}
-function buildCompareHtml() {
-  const ns = [..._compareSet];
-  const props = ns.map(n => L_DATA.find(l => l.n === n)).filter(Boolean);
-  const cols = props.length + 1; // +1 for label column
-  let h = `<div class="compare-grid" style="grid-template-columns: 100px repeat(${props.length}, minmax(180px, 1fr))">`;
-
-  function row(label, vals) {
-    h += '<div class="compare-row">';
-    h += `<div>${label}</div>`;
-    vals.forEach(v => h += `<div>${v}</div>`);
-    h += '</div>';
-  }
-
-  // Header row — address + remove button
-  h += '<div class="compare-row">';
-  h += '<div></div>';
-  props.forEach(l => {
-    h += `<div><span class="compare-addr">${escHtml(l.addr)}</span><button class="compare-remove" onclick="removeFromCompare(${l.n})" title="Remove">×</button><div style="font-size:11px;color:var(--text-muted)">${escHtml(l.hood)}</div></div>`;
-  });
-  h += '</div>';
-
-  row('Price', props.map(l => `<strong>${fmt(l.price)}</strong>${priceHistoryBadge(l.n)}`));
-  row('Status', props.map(l => sBadge(l.st)));
-  row('Interest', props.map(l => cBadge(l.cr)));
-  row('Beds / Baths', props.map(l => `${l.beds} bd / ${l.baths} ba`));
-  row('Sqft', props.map(l => l.sqft ? l.sqft.toLocaleString() + ' sqft' : '—'));
-  row('Type', props.map(l => l.type));
-  row('Walk to Dyson', props.map(l => wtBadge(walkMin(l.lat, l.lon))));
-  row('Rank', props.map(l => `<span class="stars" style="pointer-events:none">${starHtml(l.n)}</span>`));
-  row('Score', props.map(l => scoreBadgeHtml(l.n)));
-  row('Toured', props.map(l => loadToured(l.n) ? '🏠 Yes' : '—'));
-  row('Links', props.map(l => lnkHtml(l)));
-  row('Notes', props.map(l => `<div class="compare-notes">${escHtml(loadNote(l.n)) || '<em style="color:var(--text-muted)">None</em>'}</div>`));
-  row('Kevin', props.map(l => `<div class="compare-notes" style="color:var(--blue)">${escHtml(loadKevinNote(l.n)) || '<em style="color:var(--text-muted)">None</em>'}</div>`));
-
-  h += '</div>';
-  return h;
-}
-
-// NEIGHBORHOOD GROUPING
-let _groupByHood = false;
-function toggleGroupByHood() {
-  _groupByHood = !_groupByHood;
-  const btn = document.getElementById('group-toggle');
-  btn.classList.toggle('hiding', _groupByHood);
-  btn.textContent = _groupByHood ? 'Ungroup' : 'Group by Hood';
-  applyGrouping();
-}
-function applyGrouping() {
-  // Table: insert or remove hood group header rows
-  const tbody = document.querySelector('#tb tbody');
-  // Remove existing group headers
-  tbody.querySelectorAll('.hood-group-row').forEach(r => r.remove());
-  if (_groupByHood) {
-    // Sort visible rows by hood then reinsert with headers
-    const rows = [...tbody.querySelectorAll('tr:not(.empty-state-row)')];
-    const visible = rows.filter(r => !r.classList.contains('hidden'));
-    visible.sort((a, b) => (a.dataset.hood || '').localeCompare(b.dataset.hood || ''));
-    let lastHood = null;
-    visible.forEach(row => {
-      const hood = row.dataset.hood || '';
-      if (hood !== lastHood) {
-        const hdr = document.createElement('tr');
-        hdr.className = 'hood-group-row';
-        const colCount = row.querySelectorAll('td').length;
-        hdr.innerHTML = `<td colspan="${colCount}">📍 ${hood}</td>`;
-        tbody.insertBefore(hdr, row);
-        lastHood = hood;
-      }
-      tbody.appendChild(row);
+function loadState() {
+  try {
+    const checks = JSON.parse(localStorage.getItem('napa-itinerary') || '{}');
+    Object.keys(checks).forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.checked = checks[id];
     });
-  }
-  // Mobile: insert or remove hood group divs
-  const wrap = document.getElementById('cards-wrap');
-  wrap.querySelectorAll('.m-hood-group-header').forEach(h => h.remove());
-  if (_groupByHood) {
-    const cards = [...wrap.querySelectorAll('.m-card:not(.hidden)')];
-    cards.sort((a, b) => (a.dataset.hood || '').localeCompare(b.dataset.hood || ''));
-    let lastHood = null;
-    cards.forEach(card => {
-      const hood = card.dataset.hood || '';
-      if (hood !== lastHood) {
-        const hdr = document.createElement('div');
-        hdr.className = 'm-hood-group-header';
-        hdr.textContent = '📍 ' + hood;
-        wrap.insertBefore(hdr, card);
-        lastHood = hood;
-      }
-      wrap.appendChild(card);
-    });
-  }
+  } catch(e) {}
+  updateProgress();
 }
-
-// ARCHIVE TOGGLE
-let _hideArchived = true;
-function toggleArchive() {
-  _hideArchived = !_hideArchived;
-  const btn = document.getElementById('archive-toggle');
-  btn.textContent   = _hideArchived ? 'Hide Archived' : 'Show Archived';
-  btn.classList.toggle('hiding', _hideArchived);
-  applyFilters();
+function updateProgress() {
+  const all = document.querySelectorAll('input[type=checkbox]');
+  const checked = document.querySelectorAll('input[type=checkbox]:checked');
+  const pct = all.length ? Math.round((checked.length / all.length) * 100) : 0;
+  document.getElementById('progress').style.width = pct + '%';
 }
-
-// DYSON LOCATION & WALK TIME
-const DYSON = {lat: 41.8850, lon: -87.6160};
-function walkMin(lat, lon) {
-  const R = 3959;
-  const dLat = (DYSON.lat - lat) * Math.PI / 180;
-  const dLon = (DYSON.lon - lon) * Math.PI / 180;
-  const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat*Math.PI/180)*Math.cos(DYSON.lat*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  const miles = R * c;
-  return Math.round(miles * 12);
-}
-function wtBadge(mins) {
-  if (mins <= 20) return '<span class="wt-fast">FAST '+mins+'m</span>';
-  if (mins <= 35) return '<span class="wt-mid">MID '+mins+'m</span>';
-  return '<span class="wt-slow">SLOW '+mins+'m</span>';
-}
-
-// UTILITY FUNCTIONS
-function fmt(n) { return '$' + n.toLocaleString(); }
-function fmtSq(sq) { return sq ? sq.toLocaleString() + ' sqft' : '—'; }
-function escHtml(t) { return t.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
-
-function sBadge(st) {
-  const badges = {
-    'NEW': '<span class="badge b-new">NEW</span>',
-    'ACTV': '<span class="badge b-active">ACTIVE</span>',
-    'PRIV-ACTV': '<span class="badge b-priv">PRIV-ACTV</span>',
-    'PRIV-CTG': '<span class="badge b-priv">PRIV-CTG</span>',
-    'CTG': '<span class="badge b-ctg">CONTINGENT</span>',
-    'PEND': '<span class="badge b-pend">PENDING</span>',
-    'NO': '<span class="badge b-no">NO</span>',
-  };
-  return badges[st] || '';
-}
-
-function cBadge(cr) {
-  const badges = {
-    'YES': '<span class="cr-yes">YES</span>',
-    'CTG': '<span class="cr-ctg">CTG</span>',
-    'PEND': '<span class="cr-pend">PEND</span>',
-    'NO': '<span class="cr-no">NO</span>',
-  };
-  return badges[cr] || '';
-}
-
-function lnkHtml(l) {
-  let h = '<div class="links">';
-  if (l.rf) h += '<a href="' + l.rf + '" target="_blank" class="link-rf">Redfin</a>';
-  if (l.zl) h += '<a href="' + l.zl + '" target="_blank" class="link-zl">Zillow</a>';
-  h += '</div>';
-  return h;
-}
-
-function domBadge(l) {
-  if (!l.listed) return '<span class="dom-old">No date</span>';
-  const today = new Date();
-  const listed = new Date(l.listed);
-  const days = Math.floor((today - listed) / (1000*60*60*24));
-  if (days <= 14) return '<span class="dom-fresh">Fresh ' + days + 'd</span>';
-  if (days <= 30) return '<span class="dom-mid">Mid ' + days + 'd</span>';
-  return '<span class="dom-old">Old ' + days + 'd</span>';
-}
-
-function starHtml(n) {
-  const rank = loadRank(n);
-  let h = '<div class="stars" role="group" aria-label="Rating">';
-  for (let i = 1; i <= 5; i++) {
-    h += '<span class="star' + (i <= rank ? ' on' : '') + '" data-n="' + n + '" data-rank="' + i + '" role="button" aria-label="Rate ' + i + ' star' + (i !== 1 ? 's' : '') + '" tabindex="0">★</span>';
-  }
-  h += '</div>';
-  return h;
-}
-
-function clProgressHtml(n) {
-  const checks = loadChecklist(n);
-  let done = 0, total = 0;
-  CHECKLIST_SECTIONS.forEach(s => {
-    s.items.forEach(item => {
-      total++;
-      if (checks[s.id] && checks[s.id][item]) done++;
-    });
-  });
-  if (total === 0) return '<span class="cl-tbl">Tour</span>';
-  return '<span class="cl-tbl' + (done === total ? '-done' : '') + '"><span>✓</span> ' + done + '/' + total + '</span>';
-}
-
-function calcScore(n) {
-  const scores = loadScores(n);
-  const weights = loadWeights();
-  let total = 0, count = 0;
-  SCORE_CATEGORIES.forEach(cat => {
-    let catScore = 0, catCount = 0;
-    cat.criteria.forEach(crit => {
-      const val = scores[crit.id];
-      if (val && val !== 'NA') {
-        catScore += parseInt(val);
-        catCount++;
-      }
-    });
-    if (catCount > 0) {
-      const catAvg = catScore / catCount;
-      const wt = weights[cat.id] || cat.defaultWeight;
-      total += catAvg * wt;
-      count += wt;
-    }
-  });
-  return count > 0 ? Math.round(total / count) : null;
-}
-
-function scoreBadgeHtml(n) {
-  const score = calcScore(n);
-  if (score === null) return '<span class="score-tbl score-none">—</span>';
-  if (score >= 70) return '<span class="score-tbl score-hi">' + score + '</span>';
-  if (score >= 50) return '<span class="score-tbl score-mid">' + score + '</span>';
-  return '<span class="score-tbl score-lo">' + score + '</span>';
-}
-
-// RENDER TABLE
-function render() {
-  const tb = document.querySelector('#tb tbody');
-  tb.innerHTML = '';
-  L_DATA.forEach(l => {
-    const rank = loadRank(l.n);
-    const score = calcScore(l.n);
-    const tr = document.createElement('tr');
-    tr.dataset.n = l.n;
-    tr.dataset.rank = rank;
-    tr.dataset.score = score ?? -1;
-    tr.dataset.status = l.st;
-    tr.dataset.criteria = l.cr;
-    tr.dataset.price = l.price;
-    tr.dataset.beds = l.beds;
-    tr.dataset.dom = l.listed ? Math.floor((new Date() - new Date(l.listed)) / (1000*60*60*24)) : 999999;
-    tr.dataset.listed = l.listed || '';
-    tr.dataset.hood = l.hood;
-    tr.dataset.wt = walkMin(l.lat, l.lon);
-    tr.dataset.addr = l.addr;
-
-    const wtMin = walkMin(l.lat, l.lon);
-    tr.innerHTML = `
-      <td class="compare-cb-wrap"><input type="checkbox" class="compare-cb" data-n="${l.n}" onchange="toggleCompare(${l.n})" title="Add to compare"></td>
-      <td class="c">${l.n}</td>
-      <td class="addr" onclick="zoomTo(${l.lat},${l.lon})">${escHtml(l.addr)}</td>
-      <td>${escHtml(l.hood)}</td>
-      <td class="price" style="text-align:right">${fmt(l.price)}${priceHistoryBadge(l.n)}</td>
-      <td class="c">${l.beds}</td>
-      <td>${sBadge(l.st)}</td>
-      <td id="dom-cell-${l.n}" class="c">${domBadge(l)}</td>
-      <td class="c"><input type="date" class="listed-input" data-n="${l.n}" value="${loadListed(l.n)}" onchange="saveListedFromEl(event)"></td>
-      <td class="c">${wtBadge(wtMin)}</td>
-      <td class="rank-col">${starHtml(l.n)}</td>
-      <td id="score-cell-${l.n}" class="c">${scoreBadgeHtml(l.n)}</td>
-      <td id="cl-cell-${l.n}" class="c">${clProgressHtml(l.n)}</td>
-      <td class="c"><span class="toured-btn${loadToured(l.n) ? ' active' : ''}" data-n="${l.n}" onclick="toggleToured(${l.n})" title="Mark as toured">🏠</span></td>
-      <td>${lnkHtml(l)}</td>
-      <td><div class="notes-cell" data-n="${l.n}" contenteditable="true" onblur="saveNoteFromEl(event)">${escHtml(loadNote(l.n))}</div></td>
-      <td><div class="notes-cell kevin-note-cell" data-n="${l.n}" contenteditable="true" onblur="saveKevinNoteFromEl(event)">${escHtml(loadKevinNote(l.n))}</div></td>
-    `;
-    tb.appendChild(tr);
-  });
-}
-
-// FILTERS & SORT
-let sortCol = 'n', sortAsc = true;
-function sort(col) {
-  // rank/score sort descending by default (highest first)
-  const defaultDesc = ['rank', 'score'];
-  if (sortCol === col) sortAsc = !sortAsc;
-  else { sortCol = col; sortAsc = !defaultDesc.includes(col); }
-
-  document.querySelectorAll('thead th').forEach(th => th.classList.remove('sorted'));
-  const th = [...document.querySelectorAll('thead th')].find(t => t.textContent.includes(col === 'n' ? '#' : col === 'addr' ? 'Address' : col === 'hood' ? 'Hood' : col === 'price' ? 'Price' : col === 'beds' ? 'BR' : col === 'status' ? 'Status' : col === 'dom' ? 'DOM' : col === 'listed' ? 'Listed' : col === 'wt' ? 'Walk' : ''));
-  if (th) th.classList.add('sorted');
-
-  const rows = [...document.querySelectorAll('#tb tbody tr')];
-  rows.sort((a, b) => {
-    let av = a.dataset[col], bv = b.dataset[col];
-    if (!isNaN(av) && !isNaN(bv)) { av = parseFloat(av); bv = parseFloat(bv); }
-    if (av < bv) return sortAsc ? -1 : 1;
-    if (av > bv) return sortAsc ? 1 : -1;
-    return 0;
-  });
-  const tbody = document.querySelector('#tb tbody');
-  rows.forEach(r => tbody.appendChild(r));
-
-  // Also sort mobile cards
-  const cards = [...document.querySelectorAll('#cards-wrap .m-card')];
-  cards.sort((a, b) => {
-    let av = a.dataset[col], bv = b.dataset[col];
-    if (!isNaN(av) && !isNaN(bv)) { av = parseFloat(av); bv = parseFloat(bv); }
-    if (av < bv) return sortAsc ? -1 : 1;
-    if (av > bv) return sortAsc ? 1 : -1;
-    return 0;
-  });
-  const wrap = document.getElementById('cards-wrap');
-  cards.forEach(c => wrap.appendChild(c));
-}
-
-function applyFilters() {
-  const status = [];
-  document.querySelectorAll('#status-dropdown input:checked').forEach(cb => status.push(cb.value));
-  const criteria = [];
-  document.querySelectorAll('#criteria-dropdown input:checked').forEach(cb => criteria.push(cb.value));
-  const searchVal = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
-
-  // Filter table rows
-  let visibleRows = 0;
-  document.querySelectorAll('#tb tbody tr').forEach(tr => {
-    if (tr.id === 'empty-state-row') return;
-    const hasStatus   = status.length === 0   || status.includes(tr.dataset.status);
-    const hasCriteria = criteria.length === 0 || criteria.includes(tr.dataset.criteria);
-    const matchSearch = !searchVal || (tr.dataset.addr || '').toLowerCase().includes(searchVal) || (tr.dataset.hood || '').toLowerCase().includes(searchVal);
-    const isArchived  = _hideArchived && tr.dataset.criteria === 'NO' && status.length === 0 && criteria.length === 0;
-    const visible = hasStatus && hasCriteria && matchSearch && !isArchived;
-    tr.classList.toggle('hidden', !visible);
-    if (visible) visibleRows++;
-  });
-
-  // Empty state for table
-  let emptyRow = document.getElementById('empty-state-row');
-  if (visibleRows === 0) {
-    if (!emptyRow) {
-      emptyRow = document.createElement('tr');
-      emptyRow.id = 'empty-state-row';
-      emptyRow.innerHTML = '<td colspan="15" class="empty-state">No properties match your filters</td>';
-      document.querySelector('#tb tbody').appendChild(emptyRow);
-    }
-    emptyRow.style.display = '';
-  } else if (emptyRow) {
-    emptyRow.style.display = 'none';
-  }
-
-  // Filter mobile cards
-  let visibleCards = 0;
-  document.querySelectorAll('#cards-wrap .m-card').forEach(card => {
-    const hasStatus   = status.length === 0   || status.includes(card.dataset.status);
-    const hasCriteria = criteria.length === 0 || criteria.includes(card.dataset.criteria);
-    const matchSearch = !searchVal || (card.dataset.addr || '').toLowerCase().includes(searchVal) || (card.dataset.hood || '').toLowerCase().includes(searchVal);
-    const isArchived  = _hideArchived && card.dataset.criteria === 'NO' && status.length === 0 && criteria.length === 0;
-    const visible = hasStatus && hasCriteria && matchSearch && !isArchived;
-    card.classList.toggle('hidden', !visible);
-    if (visible) visibleCards++;
-  });
-
-  // Empty state for mobile
-  const emptyM = document.getElementById('empty-state-mobile');
-  if (emptyM) emptyM.style.display = visibleCards === 0 ? 'block' : 'none';
-
-  // Re-apply neighborhood grouping after filter changes
-  if (typeof _groupByHood !== 'undefined' && _groupByHood) applyGrouping();
-
-  // Re-render bulk sheets if active
-  if (typeof _currentView !== 'undefined') {
-    if (_currentView === 'scores')    renderScoreSheet();
-    if (_currentView === 'checklist') renderChecklistSheet();
-  }
-}
-
-function resetFilters() {
-  document.querySelectorAll('.ms-dropdown input').forEach(cb => cb.checked = false);
-  document.querySelectorAll('#status-trigger, #criteria-trigger').forEach(btn => btn.textContent = 'All' + (btn.id.includes('status') ? ' Statuses' : ''));
-  const si = document.getElementById('search-input');
-  if (si) si.value = '';
-  applyFilters();
-}
-
-function toggleMs(field) {
-  const dd = document.getElementById(field + '-dropdown');
-  const trigger = document.getElementById(field + '-trigger');
-  dd.classList.toggle('open');
-  trigger.classList.toggle('open');
-  trigger.setAttribute('aria-expanded', dd.classList.contains('open') ? 'true' : 'false');
-}
-
-function onMsChange() {
-  updateMsTrigger('status');
-  updateMsTrigger('criteria');
-  applyFilters();
-}
-
-function updateMsTrigger(field) {
-  const checked = document.querySelectorAll('#' + field + '-dropdown input:checked').length;
-  const total = document.querySelectorAll('#' + field + '-dropdown input').length;
-  const trigger = document.getElementById(field + '-trigger');
-  if (checked === 0) trigger.textContent = 'All' + (field === 'status' ? ' Statuses' : '');
-  else if (checked === total) trigger.textContent = 'All ' + (field === 'status' ? 'Statuses' : 'Criteria');
-  else trigger.textContent = checked + ' selected';
-}
-
+document.addEventListener('change', saveState);
 document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('.ms-dropdown input').forEach(cb => cb.addEventListener('change', onMsChange));
-});
-
-// MOBILE SORT
-function mobileSort(col, asc, btn) {
-  document.querySelectorAll('.msort-btn').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  const cards = [...document.querySelectorAll('#cards-wrap .m-card')];
-  cards.sort((a, b) => {
-    let av = parseFloat(a.dataset[col] ?? 0), bv = parseFloat(b.dataset[col] ?? 0);
-    return asc ? av - bv : bv - av;
-  });
-  const wrap = document.getElementById('cards-wrap');
-  cards.forEach(c => wrap.appendChild(c));
-}
-
-// CALC STATS
-function calcStats() {
-  let total = L_DATA.length;
-  let active = L_DATA.filter(l => ['ACTV','NEW','PRIV-ACTV'].includes(l.st)).length;
-  let toured = L_DATA.filter(l => loadToured(l.n)).length;
-  let scored = L_DATA.filter(l => calcScore(l.n) !== null).length;
-
-  document.getElementById('stat-total').textContent = total;
-  document.getElementById('stat-active').textContent = active;
-  document.getElementById('stat-toured').textContent = toured;
-  document.getElementById('stat-scored').textContent = scored;
-}
-
-// NOTE EDITING
-function saveNoteFromEl(e) {
-  const cell = e.target;
-  const n = parseInt(cell.dataset.n);
-  const note = cell.textContent;
-  saveNote(n, note);
-}
-
-// LISTED DATE
-function saveListedFromEl(e) {
-  const input = e.target;
-  const n = parseInt(input.dataset.n);
-  const date = input.value;
-  saveListed(n, date);
-}
-
-// STAR RATING
-function attachStarHandlers() {
-  document.querySelectorAll('.stars .star').forEach(star => {
-    star.addEventListener('click', (e) => {
-      const n = parseInt(e.target.dataset.n);
-      const rank = parseInt(e.target.dataset.rank);
-      saveRank(n, rank);
-    });
-    star.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); star.click(); }
-    });
-  });
-}
-
-// TOUR MODAL
-function openTourModal(n) {
-  const l = L_DATA.find(x => x.n === n);
-  if (!l) return;
-
-  document.getElementById('tour-modal-addr').textContent = l.addr;
-  document.getElementById('tour-modal-sub').textContent = l.hood + ' • ' + fmt(l.price);
-
-  const tabBar = document.getElementById('tour-tab-bar');
-  tabBar.innerHTML = '';
-  CHECKLIST_SECTIONS.forEach((sec, i) => {
-    const btn = document.createElement('button');
-    btn.className = 'tab-btn' + (i === 0 ? ' active' : '');
-    btn.textContent = sec.title;
-    btn.onclick = () => switchClTab(sec.id);
-    tabBar.appendChild(btn);
-  });
-
-  const body = document.getElementById('tour-modal-body');
-  body.innerHTML = '';
-  CHECKLIST_SECTIONS.forEach(sec => {
-    const pane = document.createElement('div');
-    pane.className = 'tab-pane' + (sec === CHECKLIST_SECTIONS[0] ? ' active' : '');
-    pane.id = 'cl-pane-' + sec.id;
-    pane.innerHTML = buildClPane(n, sec);
-    body.appendChild(pane);
-  });
-
-  document.getElementById('tour-modal').dataset.n = n;
-  document.getElementById('tour-modal').style.display = 'flex';
-}
-
-function buildClPane(n, sec) {
-  const checks = loadChecklist(n);
-  const secChecks = checks[sec.id] || {};
-  let h = '<div class="modal-section">';
-  h += '<div class="modal-section-title">' + sec.title + ' <span class="cl-progress" id="cl-prog-' + sec.id + '"></span></div>';
-  sec.items.forEach(item => {
-    const checked = secChecks[item] || false;
-    h += '<label class="checklist-item' + (checked ? ' checked' : '') + '"><input type="checkbox" data-sec="' + sec.id + '" data-item="' + item + '"' + (checked ? ' checked' : '') + ' onchange="toggleCheck(event)"> <span>' + item + '</span></label>';
-  });
-  h += '</div>';
-  return h;
-}
-
-function switchClTab(secId) {
-  document.querySelectorAll('#tour-modal-body .tab-pane').forEach(p => p.classList.remove('active'));
-  document.getElementById('cl-pane-' + secId).classList.add('active');
-  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
-    btn.classList.toggle('active', CHECKLIST_SECTIONS[i].id === secId);
-  });
-}
-
-function toggleCheck(e) {
-  const secId = e.target.dataset.sec;
-  const item = e.target.dataset.item;
-  // Support both tour modal and checklist sheet (find nearest data-n ancestor)
-  const wrapper = e.target.closest('[data-n]');
-  const n = wrapper ? parseInt(wrapper.dataset.n) : parseInt(document.getElementById('tour-modal').dataset.n);
-  const l = L_DATA.find(x => x.n === n);
-  if (!l) return;
-
-  const checks = loadChecklist(l.n);
-  if (!checks[secId]) checks[secId] = {};
-  checks[secId][item] = e.target.checked;
-  saveChecklist(l.n, checks);
-
-  e.target.closest('.checklist-item').classList.toggle('checked', e.target.checked);
-  updateClTotalProgress(l.n);
-
-  // Update checklist sheet pips if we're in that view
-  if (typeof _currentView !== 'undefined' && _currentView === 'checklist') {
-    const sheetRow = document.querySelector(`#checklist-sheet .sheet-row[data-n="${n}"]`);
-    if (sheetRow) {
-      // Refresh pips
-      sheetRow.querySelectorAll('.cl-pip').forEach((pip, i) => {
-        const sec = CHECKLIST_SECTIONS[i];
-        if (!sec) return;
-        const done = sec.items.filter(itm => checks[sec.id]?.[itm]).length;
-        pip.className = 'cl-pip' + (done === 0 ? '' : done === sec.items.length ? ' done' : ' partial');
-        pip.title = sec.title + ': ' + done + '/' + sec.items.length;
-      });
-      // Refresh overall progress badge
-      const progBadge = sheetRow.querySelector('.cl-progress');
-      if (progBadge) progBadge.outerHTML = clProgressHtml(n);
-      // Refresh active tab label
-      const activeTab = sheetRow.querySelector('.cl-sheet-tab.active');
-      if (activeTab) {
-        const sec = CHECKLIST_SECTIONS.find(s => s.id === activeTab.dataset.sec);
-        if (sec) {
-          const done = sec.items.filter(itm => checks[sec.id]?.[itm]).length;
-          activeTab.textContent = sec.title.split(' ').slice(0,2).join(' ') + ' ' + done + '/' + sec.items.length;
-        }
-      }
-    }
-  }
-}
-
-function updateClTotalProgress(n) {
-  const checks = loadChecklist(n);
-  let done = 0, total = 0;
-  CHECKLIST_SECTIONS.forEach(s => {
-    s.items.forEach(item => {
-      total++;
-      if (checks[s.id] && checks[s.id][item]) done++;
-    });
-  });
-  const cl = document.getElementById('cl-cell-' + n);
-  if (cl) cl.innerHTML = clProgressHtml(n);
-}
-
-function clearChecklist(n) {
-  if (!confirm('Clear all tour items?')) return;
-  saveChecklist(n, {});
-  document.querySelectorAll('#tour-modal-body input[type=checkbox]').forEach(cb => {
-    cb.checked = false;
-    cb.closest('.checklist-item').classList.remove('checked');
-  });
-  updateClTotalProgress(n);
-}
-
-function closeTourModal(e) {
-  if (e && e.target.id !== 'tour-modal') return;
-  document.getElementById('tour-modal').style.display = 'none';
-}
-
-// SCORE MODAL
-function openScoreModal(n) {
-  const l = L_DATA.find(x => x.n === n);
-  if (!l) return;
-
-  document.getElementById('score-modal-addr').textContent = l.addr;
-  document.getElementById('score-modal-sub').textContent = l.hood + ' • ' + fmt(l.price);
-
-  const body = document.getElementById('score-modal-body');
-  body.innerHTML = buildScoreBody(n);
-
-  document.getElementById('score-modal').dataset.n = n;
-  document.getElementById('score-modal').style.display = 'flex';
-}
-
-function buildScoreBody(n) {
-  const scores = loadScores(n);
-  const weights = loadWeights();
-  let h = '';
-
-  SCORE_CATEGORIES.forEach(cat => {
-    let catScore = 0, catCount = 0;
-    cat.criteria.forEach(crit => {
-      const val = scores[crit.id];
-      if (val && val !== 'NA') {
-        catScore += parseInt(val);
-        catCount++;
-      }
-    });
-    const catAvg = catCount > 0 ? Math.round(catScore / catCount) : null;
-
-    h += '<div class="score-category">';
-    h += '<div class="score-cat-header">';
-    h += '<span class="score-cat-title">' + cat.title + '</span>';
-    if (catAvg !== null) h += '<span class="score-cat-avg">' + catAvg + '</span>';
-    h += '</div>';
-
-    h += '<div class="score-cat-weight-row">';
-    h += 'Weight: <input type="number" class="weight-input" id="weight-' + cat.id + '" value="' + (weights[cat.id] || cat.defaultWeight) + '" min="0" max="100" onchange="updateWeight(event, \'' + cat.id + '\')">';
-    h += '<span class="weight-warning" id="warn-' + cat.id + '">Weights must sum to 100 <button class="normalize-btn" onclick="normalizeWeights()">Normalize</button></span>';
-    h += '</div>';
-
-    cat.criteria.forEach(crit => {
-      const val = scores[crit.id] || null;
-      h += '<div class="score-criterion">';
-      h += '<label>' + crit.label + '</label>';
-      h += '<div class="score-dots">';
-      for (let i = 1; i <= 5; i++) {
-        h += '<div class="score-dot' + (val === i.toString() ? ' active' : '') + '" onclick="setScore(event, \'' + cat.id + '\', \'' + crit.id + '\', ' + i + ')">' + i + '</div>';
-      }
-      h += '<div class="score-dot na-dot' + (val === 'NA' ? ' active' : '') + '" onclick="setScore(event, \'' + cat.id + '\', \'' + crit.id + '\', \'NA\')">N/A</div>';
-      h += '</div></div>';
-    });
-    h += '</div>';
-  });
-
-  const total = calcScore(n);
-  h += '<div class="score-result-bar">';
-  if (total !== null) {
-    h += '<div class="score-total-row"><span class="score-total-num">' + total + '</span><span class="score-total-denom">/100</span></div>';
-    h += '<div class="score-total-label">Overall Score</div>';
-    h += '<div class="score-breakdown">';
-    SCORE_CATEGORIES.forEach(cat => {
-      let catScore = 0, catCount = 0;
-      cat.criteria.forEach(crit => {
-        const val = scores[crit.id];
-        if (val && val !== 'NA') { catScore += parseInt(val); catCount++; }
-      });
-      if (catCount > 0) {
-        const catAvg = Math.round(catScore / catCount);
-        h += '<span class="score-cat-chip ' + cat.chipClass + '">' + cat.id.toUpperCase() + ' ' + catAvg + '</span>';
-      }
-    });
-    h += '</div>';
+  // Auto-open today's card
+  const today = new Date().toISOString().slice(0,10);
+  const dayMap = {'2026-04-15':'day-wed','2026-04-16':'day-thu','2026-04-17':'day-fri','2026-04-18':'day-sat','2026-04-19':'day-sun'};
+  const target = dayMap[today];
+  if (target) {
+    const card = document.querySelector('#' + target + ' .day-card');
+    if (card) card.classList.add('open');
   } else {
-    h += '<div class="score-total-label">No scores entered yet</div>';
+    // If not during trip, open first day
+    const first = document.querySelector('.day-card');
+    if (first) first.classList.add('open');
   }
-  h += '</div>';
-
-  h += '<div style="padding:12px 20px; display:flex; gap:8px;">';
-  h += '<button class="btn-secondary" onclick="clearScore(' + n + ')">Clear All</button>';
-  h += '</div>';
-
-  return h;
-}
-
-function setScore(e, catId, critId, val) {
-  e.target.parentElement.querySelectorAll('.score-dot').forEach(d => d.classList.remove('active'));
-  e.target.classList.add('active');
-
-  // Support both score modal and inline score sheet
-  const container = e.target.closest('[data-n]');
-  const n = container ? parseInt(container.dataset.n) : parseInt(document.getElementById('score-modal').dataset.n);
-  const l = L_DATA.find(x => x.n === n);
-  if (!l) return;
-
-  const scores = loadScores(l.n) || {};
-  scores[critId] = val.toString();
-  saveScores(l.n, scores);
-
-  // Refresh the body in the right container
-  const sheetBody = e.target.closest('.sheet-row-body');
-  if (sheetBody) {
-    sheetBody.querySelector('.score-modal-body-inner, .modal-body-content, [data-score-body]')?.remove();
-    sheetBody.innerHTML = buildScoreBody(n);
-    // Update header chips and badge
-    const row = sheetBody.closest('.sheet-row');
-    if (row) {
-      const chips = row.querySelector('.sheet-cat-chips');
-      if (chips) chips.innerHTML = buildCategoryChips(n);
-      const badge = row.querySelector('.score-tbl');
-      if (badge) badge.outerHTML = scoreBadgeHtml(n);
-    }
-  } else {
-    document.getElementById('score-modal-body').innerHTML = buildScoreBody(n);
-  }
-
-  const scoreCell = document.getElementById('score-cell-' + n);
-  if (scoreCell) {
-    scoreCell.innerHTML = scoreBadgeHtml(n);
-    const tr = scoreCell.closest('tr');
-    if (tr) tr.dataset.score = calcScore(n) ?? -1;
-  }
-  const mScoreCell = document.getElementById('m-score-cell-' + n);
-  if (mScoreCell) mScoreCell.innerHTML = scoreBadgeHtml(n);
-}
-
-function updateWeight(e, catId) {
-  const weights = loadWeights();
-  weights[catId] = parseInt(e.target.value) || 0;
-
-  const sum = Object.values(weights).reduce((a, b) => a + b, 0);
-  const warnings = document.querySelectorAll('.weight-warning');
-  const shouldShow = sum !== 100;
-  warnings.forEach(w => w.style.display = shouldShow ? 'inline' : 'none');
-
-  saveWeights(weights);
-}
-
-function normalizeWeights() {
-  const weights = loadWeights();
-  const sum = Object.values(weights).reduce((a, b) => a + b, 0);
-  if (sum === 0) return;
-  const ids = Object.keys(weights);
-  // Proportionally scale to sum to 100
-  let newWeights = {};
-  ids.forEach(id => newWeights[id] = Math.round(weights[id] / sum * 100));
-  // Fix rounding drift — adjust largest category
-  const drift = 100 - Object.values(newWeights).reduce((a, b) => a + b, 0);
-  if (drift !== 0) {
-    const largest = ids.reduce((a, b) => newWeights[a] >= newWeights[b] ? a : b);
-    newWeights[largest] += drift;
-  }
-  saveWeights(newWeights);
-  // Update inputs in DOM
-  ids.forEach(id => {
-    const inp = document.getElementById('weight-' + id);
-    if (inp) inp.value = newWeights[id];
-  });
-  document.querySelectorAll('.weight-warning').forEach(w => w.style.display = 'none');
-  showToast('Weights normalized ✓');
-}
-
-function updateScoreTotal(n) {
-  document.getElementById('score-modal-body').innerHTML = buildScoreBody(n);
-}
-
-function clearScore(n) {
-  if (!confirm('Clear all scores?')) return;
-  saveScores(n, {});
-  // Refresh modal if open
-  const modalBody = document.getElementById('score-modal-body');
-  if (modalBody) modalBody.innerHTML = buildScoreBody(n);
-  // Refresh score sheet row if open
-  const sheetBody = document.querySelector(`#score-sheet .sheet-row[data-n="${n}"] .sheet-row-body`);
-  if (sheetBody) sheetBody.innerHTML = buildScoreBody(n);
-  const sheetRow = document.querySelector(`#score-sheet .sheet-row[data-n="${n}"]`);
-  if (sheetRow) {
-    const chips = sheetRow.querySelector('.sheet-cat-chips');
-    if (chips) chips.innerHTML = buildCategoryChips(n);
-    const badge = sheetRow.querySelector('.score-tbl');
-    if (badge) badge.outerHTML = scoreBadgeHtml(n);
-  }
-  const scoreCell = document.getElementById('score-cell-' + n);
-  if (scoreCell) {
-    scoreCell.innerHTML = scoreBadgeHtml(n);
-    const tr = scoreCell.closest('tr');
-    if (tr) tr.dataset.score = -1;
-  }
-}
-
-function closeScoreModal(e) {
-  if (e && e.target.id !== 'score-modal') return;
-  document.getElementById('score-modal').style.display = 'none';
-}
-
-// MAP
-let mapInst = null;
-function initMap() {
-  mapInst = L.map('map').setView([41.8920, -87.6475], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: 'OpenStreetMap',
-    maxZoom: 19
-  }).addTo(mapInst);
-
-  const colorMap = {
-    'ACTV': '#C6EFCE', 'NEW': '#C6EFCE', 'PRIV-ACTV': '#C6EFCE',
-    'CTG': '#FFE699', 'PRIV-CTG': '#FFE699',
-    'PEND': '#ffe0cc',
-    'NO': '#FFC7CE',
-    'default': '#e8daef'
-  };
-
-  L_DATA.forEach(l => {
-    const color = colorMap[l.st] || colorMap['default'];
-    const marker = L.circleMarker([l.lat, l.lon], {
-      radius: 8, fillColor: color, fillOpacity: 0.9, weight: 2, color: 'white'
-    }).addTo(mapInst);
-
-    let popupHtml = '<div class="popup-card">';
-    popupHtml += '<h3>' + escHtml(l.addr) + '</h3>';
-    popupHtml += '<div class="price">' + fmt(l.price) + '</div>';
-    popupHtml += '<div class="details">' + l.beds + ' bd, ' + l.baths + ' ba • ' + l.type + '</div>';
-    popupHtml += '<div class="popup-links">' + lnkHtml(l).replace(/<div class="links">/,'').replace(/<\/div>/,'') + '</div>';
-    popupHtml += '</div>';
-
-    marker.bindPopup(popupHtml);
-  });
-}
-
-function zoomTo(lat, lon) {
-  if (mapInst) mapInst.setView([lat, lon], 16);
-}
-
-function toggleMap() {
-  const map = document.getElementById('map');
-  const btn = document.querySelector('.map-toggle-btn');
-  const isCollapsed = btn.classList.contains('collapsed');
-
-  if (isCollapsed) {
-    map.style.display = 'block';
-    btn.classList.remove('collapsed');
-    if (mapInst) mapInst.invalidateSize();
-  } else {
-    map.style.display = 'none';
-    btn.classList.add('collapsed');
-  }
-}
-
-// MOBILE CARDS
-function appleMapUrl(addr) {
-  return 'https://maps.apple.com/?q=' + encodeURIComponent(addr + ', Chicago, IL');
-}
-
-function renderMobileCards() {
-  const wrap = document.getElementById('cards-wrap');
-  wrap.innerHTML = '';
-
-  L_DATA.forEach(l => {
-    const rank = loadRank(l.n);
-    const score = calcScore(l.n);
-    const wtMin = walkMin(l.lat, l.lon);
-
-    const card = document.createElement('div');
-    card.className = 'm-card';
-    card.dataset.n      = l.n;
-    card.dataset.rank   = rank;
-    card.dataset.score  = score ?? -1;
-    card.dataset.status   = l.st;
-    card.dataset.criteria = l.cr;
-    card.dataset.price    = l.price;
-    card.dataset.beds     = l.beds;
-    card.dataset.wt       = wtMin;
-    card.dataset.dom      = l.listed ? Math.floor((new Date() - new Date(l.listed)) / (1000*60*60*24)) : 999999;
-    card.dataset.addr     = l.addr;
-    card.dataset.hood     = l.hood;
-
-    card.innerHTML = `
-      <div class="m-card-header">
-        <div class="m-card-header-left">
-          <a href="${appleMapUrl(l.addr)}" target="_blank" class="m-addr-link">${escHtml(l.addr)}</a>
-          <div class="m-card-hood">${escHtml(l.hood)}</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-          <div class="m-card-price">${fmt(l.price)}${priceHistoryBadge(l.n)}</div>
-          <div class="m-compare-wrap"><input type="checkbox" class="compare-cb" data-n="${l.n}" onchange="toggleCompare(${l.n})"><span style="font-size:11px">Compare</span></div>
-        </div>
-      </div>
-      <div class="m-card-meta">${l.beds} bd, ${l.baths} ba • ${l.type}</div>
-      <div class="m-card-badges">
-        ${sBadge(l.st)}
-        ${cBadge(l.cr)}
-        ${wtBadge(wtMin)}
-        <span id="m-dom-cell-${l.n}">${domBadge(l)}</span>
-      </div>
-      <div class="m-card-actions">
-        <div class="action-btns">
-          <button class="btn-secondary" style="font-size:12px; padding:6px 10px;" onclick="openTourModal(${l.n})">Tour</button>
-          <button class="btn-secondary" style="font-size:12px; padding:6px 10px;" onclick="openScoreModal(${l.n})">Score</button>
-          <div class="m-toured-wrap${loadToured(l.n) ? ' active' : ''}" data-n="${l.n}" onclick="toggleToured(${l.n})">🏠 <span class="m-toured-text">${loadToured(l.n) ? 'Toured' : 'Not toured'}</span></div>
-        </div>
-        <div class="stars" id="m-stars-${l.n}">${starHtml(l.n)}</div>
-        <div id="m-score-cell-${l.n}" class="c">${scoreBadgeHtml(l.n)}</div>
-        <div id="m-cl-cell-${l.n}" class="c">${clProgressHtml(l.n)}</div>
-      </div>
-      <div class="m-card-links">${lnkHtml(l)}</div>
-      <div class="m-card-notes">
-        <div class="m-notes-label">Notes</div>
-        <div class="m-notes-cell" data-n="${l.n}" contenteditable="true" onblur="saveNoteFromEl(event)">${escHtml(loadNote(l.n))}</div>
-      </div>
-      <div class="m-card-notes" style="padding-top:0">
-        <div class="m-notes-label" style="color:var(--blue)">Kevin</div>
-        <div class="m-kevin-cell" data-n="${l.n}" contenteditable="true" onblur="saveKevinNoteFromEl(event)">${escHtml(loadKevinNote(l.n))}</div>
-      </div>
-    `;
-    wrap.appendChild(card);
-  });
-}
-
-function attachMobileStarHandlers() {
-  document.querySelectorAll('.m-card .stars .star').forEach(star => {
-    star.addEventListener('click', (e) => {
-      const n = parseInt(e.target.dataset.n);
-      const rank = parseInt(e.target.dataset.rank);
-      saveRank(n, rank);
-    });
-  });
-}
-
-// VIEW MODE
-function initViewMode() {
-  if (typeof _currentView !== 'undefined' && _currentView !== 'properties') return;
-  const isDesktop = window.innerWidth > 768;
-  document.querySelector('.table-wrap').style.display = isDesktop ? 'block' : 'none';
-  document.getElementById('cards-wrap').style.display = isDesktop ? 'none' : 'block';
-}
-
-// SETUP FIREBASE LISTENERS
-function setupFirebaseListeners() {
-  trackerRef.child('ranks').on('value', snap => {
-    _cache.ranks = snap.val() || {};
-    L_DATA.forEach(l => {
-      const rank = _cache.ranks[l.n] || 0;
-      const tableStars = document.querySelector(`#tb tr[data-n="${l.n}"] .stars`);
-      if (tableStars) {
-        tableStars.querySelectorAll('.star').forEach((s, i) => {
-          s.classList.toggle('on', i < rank);
-        });
-        const tr = tableStars.closest('tr');
-        if (tr) tr.dataset.rank = rank;
-      }
-      const mCard = document.querySelector(`.m-card[data-n="${l.n}"] .stars`);
-      if (mCard) {
-        mCard.querySelectorAll('.star').forEach((s, i) => {
-          s.classList.toggle('on', i < rank);
-        });
-        const card = mCard.closest('.m-card');
-        if (card) card.dataset.rank = rank;
-      }
-    });
-    calcStats();
-  });
-
-  trackerRef.child('notes').on('value', snap => {
-    _cache.notes = snap.val() || {};
-    L_DATA.forEach(l => {
-      const note = _cache.notes[l.n];
-      if (note === undefined) return;
-      const cell = document.querySelector(`#tb .notes-cell[data-n="${l.n}"]`);
-      if (cell && document.activeElement !== cell) cell.textContent = note;
-      const mCell = document.querySelector(`#cards-wrap .m-notes-cell[data-n="${l.n}"]`);
-      if (mCell && document.activeElement !== mCell) mCell.textContent = note;
-    });
-  });
-
-  trackerRef.child('scores').on('value', snap => {
-    _cache.scores = snap.val() || {};
-    L_DATA.forEach(l => {
-      const cell = document.getElementById('score-cell-' + l.n);
-      if (cell) {
-        cell.innerHTML = scoreBadgeHtml(l.n);
-        const row = cell.closest('tr');
-        if (row) row.dataset.score = calcScore(l.n) ?? -1;
-      }
-      const mCell = document.getElementById('m-score-cell-' + l.n);
-      if (mCell) {
-        mCell.innerHTML = scoreBadgeHtml(l.n);
-        const card = mCell.closest('.m-card');
-        if (card) card.dataset.score = calcScore(l.n) ?? -1;
-      }
-    });
-    calcStats();
-    if (typeof _currentView !== 'undefined' && _currentView === 'scores') renderScoreSheet();
-  });
-
-  trackerRef.child('checklists').on('value', snap => {
-    _cache.checklists = snap.val() || {};
-    L_DATA.forEach(l => {
-      const cell = document.getElementById('cl-cell-' + l.n);
-      if (cell) cell.innerHTML = clProgressHtml(l.n);
-      const mCell = document.getElementById('m-cl-cell-' + l.n);
-      if (mCell) mCell.innerHTML = clProgressHtml(l.n);
-    });
-    calcStats();
-    if (typeof _currentView !== 'undefined' && _currentView === 'checklist') renderChecklistSheet();
-  });
-
-  trackerRef.child('listed').on('value', snap => {
-    _cache.listed = snap.val() || {};
-    L_DATA.forEach(l => {
-      const input = document.querySelector(`#tb .listed-input[data-n="${l.n}"]`);
-      if (input && document.activeElement !== input) input.value = loadListed(l.n);
-      const domCell = document.getElementById('dom-cell-' + l.n);
-      if (domCell) domCell.innerHTML = domBadge(l);
-      const mDom = document.getElementById('m-dom-cell-' + l.n);
-      if (mDom) mDom.innerHTML = domBadge(l);
-    });
-  });
-
-  trackerRef.child('weights').on('value', snap => {
-    _cache.weights = snap.val() || null;
-    L_DATA.forEach(l => {
-      const cell = document.getElementById('score-cell-' + l.n);
-      if (cell) {
-        cell.innerHTML = scoreBadgeHtml(l.n);
-        const row = cell.closest('tr');
-        if (row) row.dataset.score = calcScore(l.n) ?? -1;
-      }
-      const mCell = document.getElementById('m-score-cell-' + l.n);
-      if (mCell) {
-        mCell.innerHTML = scoreBadgeHtml(l.n);
-        const card = mCell.closest('.m-card');
-        if (card) card.dataset.score = calcScore(l.n) ?? -1;
-      }
-    });
-  });
-
-  trackerRef.child('toured').on('value', snap => {
-    _cache.toured = snap.val() || {};
-    L_DATA.forEach(l => {
-      const v = loadToured(l.n);
-      document.querySelectorAll(`.toured-btn[data-n="${l.n}"]`).forEach(el => el.classList.toggle('active', v));
-      document.querySelectorAll(`.m-toured-wrap[data-n="${l.n}"]`).forEach(el => {
-        el.classList.toggle('active', v);
-        const txt = el.querySelector('.m-toured-text');
-        if (txt) txt.textContent = v ? 'Toured' : 'Not toured';
-      });
-    });
-    calcStats();
-  });
-
-  trackerRef.child('kevinNotes').on('value', snap => {
-    _cache.kevinNotes = snap.val() || {};
-    L_DATA.forEach(l => {
-      const note = _cache.kevinNotes[l.n];
-      if (note === undefined) return;
-      const cells = document.querySelectorAll(`.m-kevin-cell[data-n="${l.n}"]`);
-      cells.forEach(cell => { if (document.activeElement !== cell) cell.textContent = note; });
-      const tblCells = document.querySelectorAll(`#tb .kevin-note-cell[data-n="${l.n}"]`);
-      tblCells.forEach(cell => { if (document.activeElement !== cell) cell.textContent = note; });
-    });
-  });
-
-  trackerRef.child('priceHistory').on('value', snap => {
-    _cache.priceHistory = snap.val() || {};
-    L_DATA.forEach(l => {
-      const badge = priceHistoryBadge(l.n);
-      const priceCell = document.querySelector(`#tb tr[data-n="${l.n}"] .price`);
-      if (priceCell) priceCell.innerHTML = fmt(l.price) + badge;
-      const mPrice = document.querySelector(`.m-card[data-n="${l.n}"] .m-card-price`);
-      if (mPrice) mPrice.innerHTML = fmt(l.price) + badge;
-    });
-  });
-
-  // Last synced timestamp
-  configRef.child('lastUpdated').on('value', snap => {
-    const ts = snap.val();
-    const el = document.getElementById('stat-updated');
-    if (!el || !ts) return;
-    const mins = Math.round((Date.now() - new Date(ts)) / 60000);
-    if (mins < 60) el.textContent = mins + 'm ago';
-    else if (mins < 1440) el.textContent = Math.round(mins / 60) + 'h ago';
-    else el.textContent = Math.round(mins / 1440) + 'd ago';
-  });
-}
-
-// PIN GATE
-async function checkPin() {
-  const pin = document.getElementById('pin-input').value;
-  if (!pin) return;
-
-  document.getElementById('pin-loading').style.display = 'block';
-  document.getElementById('pin-error').textContent = '';
-
-  try {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(pin);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-    const snap = await db.ref('config/pinHash').once('value');
-    const storedHash = snap.val();
-
-    document.getElementById('pin-loading').style.display = 'none';
-
-    if (hashHex === storedHash) {
-      sessionStorage.setItem('hst_authed', 'true');
-      showTracker();
-    } else {
-      document.getElementById('pin-error').textContent = 'Incorrect PIN';
-      document.getElementById('pin-input').value = '';
-      document.getElementById('pin-input').focus();
-    }
-  } catch (e) {
-    console.error('Firebase error:', e);
-    document.getElementById('pin-loading').style.display = 'none';
-    document.getElementById('pin-error').textContent = 'Connection error. Check config.';
-  }
-}
-
-async function showTracker() {
-  document.getElementById('pin-gate').style.display = 'none';
-  document.getElementById('tracker-app').style.display = 'block';
-
-  try {
-    const snap = await trackerRef.once('value');
-    const data = snap.val() || {};
-    _cache.ranks = data.ranks || {};
-    _cache.notes = data.notes || {};
-    _cache.scores = data.scores || {};
-    _cache.checklists = data.checklists || {};
-    _cache.listed = data.listed || {};
-    _cache.weights = data.weights || null;
-    _cache.toured = data.toured || {};
-    _cache.priceHistory = data.priceHistory || {};
-    _cache.kevinNotes = data.kevinNotes || {};
-  } catch (e) {
-    console.warn('Firebase load failed:', e);
-  }
-
-  render();
-  renderMobileCards();
-  attachStarHandlers();
-  attachMobileStarHandlers();
-  initMap();
-  initViewMode();
-  calcStats();
-
-  setupFirebaseListeners();
-
-  document.querySelectorAll('.ms-dropdown input').forEach(cb => cb.addEventListener('change', onMsChange));
-}
-
-// BULK SHEET VIEW SWITCHING
-let _currentView = 'properties';
-
-function setView(view) {
-  _currentView = view;
-  document.querySelectorAll('.view-tab').forEach(t =>
-    t.classList.toggle('active', t.id === 'tab-' + view));
-
-  const isProps = view === 'properties';
-  const scoreEl = document.getElementById('score-sheet');
-  const clEl    = document.getElementById('checklist-sheet');
-  const msBar   = document.getElementById('mobile-sort-bar');
-  const cmpBar  = document.getElementById('compare-bar');
-  const tblWrap = document.querySelector('.table-wrap');
-  const cardsWrap = document.getElementById('cards-wrap');
-
-  if (tblWrap)    tblWrap.style.display    = isProps ? '' : 'none';
-  if (cardsWrap)  cardsWrap.style.display  = isProps ? '' : 'none';
-  if (msBar)      msBar.style.display      = isProps ? '' : 'none';
-  if (cmpBar)     cmpBar.classList.remove('show');
-  if (scoreEl)    scoreEl.style.display    = view === 'scores'     ? 'block' : 'none';
-  if (clEl)       clEl.style.display       = view === 'checklist'  ? 'block' : 'none';
-
-  if (view === 'scores')     renderScoreSheet();
-  if (view === 'checklist')  renderChecklistSheet();
-  if (view === 'properties') initViewMode();
-}
-
-function isPropertyVisible(l) {
-  const status   = [...document.querySelectorAll('#status-dropdown input:checked')].map(cb => cb.value);
-  const criteria = [...document.querySelectorAll('#criteria-dropdown input:checked')].map(cb => cb.value);
-  const searchVal = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
-  const hasStatus   = status.length   === 0 || status.includes(l.st);
-  const hasCriteria = criteria.length === 0 || criteria.includes(l.cr);
-  const matchSearch = !searchVal || l.addr.toLowerCase().includes(searchVal) || l.hood.toLowerCase().includes(searchVal);
-  const isArchived  = (typeof _hideArchived !== 'undefined') && _hideArchived && l.cr === 'NO' && status.length === 0 && criteria.length === 0;
-  return hasStatus && hasCriteria && matchSearch && !isArchived;
-}
-
-// SCORE SHEET
-let _expandedScoreN = null;
-
-function renderScoreSheet() {
-  const wrap = document.getElementById('score-sheet');
-  if (!wrap) return;
-  const visible = L_DATA.filter(l => isPropertyVisible(l));
-  let h = '<div class="sheet-wrap">';
-  if (visible.length === 0) {
-    h += '<div class="empty-state">No properties match your filters</div>';
-  }
-  visible.forEach(l => {
-    const isOpen = _expandedScoreN === l.n;
-    h += `<div class="sheet-row${isOpen ? ' open' : ''}" data-n="${l.n}">`;
-    h += `<div class="sheet-row-hdr" onclick="toggleScoreExpand(${l.n})">`;
-    h += `<span class="sheet-row-num">#${l.n}</span>`;
-    h += `<div class="sheet-row-info"><div class="sheet-row-addr">${escHtml(l.addr)}</div>`;
-    h += `<div class="sheet-row-sub">${escHtml(l.hood)} · ${fmt(l.price)}</div></div>`;
-    h += `<div class="sheet-cat-chips">${buildCategoryChips(l.n)}</div>`;
-    h += scoreBadgeHtml(l.n);
-    h += `<span class="sheet-chevron">▼</span></div>`;
-    if (isOpen) {
-      h += `<div class="sheet-row-body" data-n="${l.n}">${buildScoreBody(l.n)}</div>`;
-    }
-    h += '</div>';
-  });
-  h += '</div>';
-  wrap.innerHTML = h;
-}
-
-function toggleScoreExpand(n) {
-  _expandedScoreN = (_expandedScoreN === n) ? null : n;
-  renderScoreSheet();
-}
-
-function buildCategoryChips(n) {
-  const scores = loadScores(n);
-  let h = '';
-  SCORE_CATEGORIES.forEach(cat => {
-    let sum = 0, count = 0;
-    cat.criteria.forEach(c => {
-      const v = scores[c.id];
-      if (v && v !== 'NA') { sum += parseInt(v); count++; }
-    });
-    if (count > 0) {
-      h += `<span class="score-cat-chip ${cat.chipClass}">${cat.id.toUpperCase()} ${Math.round(sum/count)}</span>`;
-    }
-  });
-  return h || `<span style="font-size:11px;color:var(--text-muted)">Not scored</span>`;
-}
-
-// CHECKLIST SHEET
-let _expandedClN   = null;
-let _expandedClSec = null;
-
-function renderChecklistSheet() {
-  const wrap = document.getElementById('checklist-sheet');
-  if (!wrap) return;
-  const visible = L_DATA.filter(l => isPropertyVisible(l));
-  let h = '<div class="sheet-wrap">';
-  if (visible.length === 0) h += '<div class="empty-state">No properties match your filters</div>';
-  visible.forEach(l => {
-    const cl = loadChecklist(l.n);
-    const isOpen = _expandedClN === l.n;
-    const secId  = _expandedClSec || CHECKLIST_SECTIONS[0].id;
-    h += `<div class="sheet-row${isOpen ? ' open' : ''}" data-n="${l.n}">`;
-    h += `<div class="sheet-row-hdr" onclick="toggleClExpand(${l.n})">`;
-    h += `<span class="sheet-row-num">#${l.n}</span>`;
-    h += `<div class="sheet-row-info"><div class="sheet-row-addr">${escHtml(l.addr)}</div>`;
-    h += `<div class="sheet-row-sub">${escHtml(l.hood)}</div></div>`;
-    // 11-pip progress row
-    h += '<div class="cl-pips">';
-    CHECKLIST_SECTIONS.forEach(sec => {
-      const done  = sec.items.filter(item => cl[sec.id]?.[item]).length;
-      const total = sec.items.length;
-      const cls   = done === 0 ? '' : done === total ? ' done' : ' partial';
-      h += `<div class="cl-pip${cls}" title="${escHtml(sec.title)}: ${done}/${total}"></div>`;
-    });
-    h += '</div>';
-    h += clProgressHtml(l.n);
-    h += `<span class="sheet-chevron">▼</span></div>`;
-    if (isOpen) {
-      h += `<div class="sheet-row-body" data-n="${l.n}">`;
-      // Section tabs
-      h += '<div class="cl-sheet-tabs">';
-      CHECKLIST_SECTIONS.forEach(sec => {
-        const done  = sec.items.filter(item => cl[sec.id]?.[item]).length;
-        const isAct = secId === sec.id;
-        const emoji = sec.title.split(' ')[0];
-        h += `<button class="cl-sheet-tab${isAct ? ' active' : ''}" data-sec="${sec.id}" onclick="setClSection(${l.n},'${sec.id}')">`;
-        h += `${emoji} ${done}/${sec.items.length}</button>`;
-      });
-      h += '</div>';
-      // Active section content — reuse buildClPane
-      const activeSec = CHECKLIST_SECTIONS.find(s => s.id === secId);
-      if (activeSec) h += buildClPane(l.n, activeSec);
-      h += '</div>';
-    }
-    h += '</div>';
-  });
-  h += '</div>';
-  wrap.innerHTML = h;
-}
-
-function toggleClExpand(n) {
-  if (_expandedClN === n) { _expandedClN = null; _expandedClSec = null; }
-  else { _expandedClN = n; _expandedClSec = null; }
-  renderChecklistSheet();
-}
-
-function setClSection(n, secId) {
-  _expandedClN   = n;
-  _expandedClSec = secId;
-  renderChecklistSheet();
-}
-
-// DARK MODE
-function applyTheme(theme) {
-  document.documentElement.dataset.theme = theme;
-  const btn = document.getElementById('theme-toggle');
-  if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
-  localStorage.setItem('hst_theme', theme);
-}
-function toggleTheme() {
-  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
-}
-// Apply on load
-(function() {
-  const saved = localStorage.getItem('hst_theme');
-  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  applyTheme(saved || (prefersDark ? 'dark' : 'light'));
-})();
-
-// KEYBOARD SHORTCUTS
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    if (document.getElementById('tour-modal').style.display    !== 'none') closeTourModal();
-    if (document.getElementById('score-modal').style.display   !== 'none') closeScoreModal();
-    if (document.getElementById('compare-modal').style.display !== 'none') document.getElementById('compare-modal').style.display = 'none';
-  }
+  loadState();
 });
-
-// INIT
-document.getElementById('pin-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') checkPin();
-});
-
-if (sessionStorage.getItem('hst_authed') === 'true') {
-  showTracker();
-}
-
-window.addEventListener('resize', initViewMode);
 </script>
 
-<div id="toast" class="toast"></div>
 </body>
 </html>

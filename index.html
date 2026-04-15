@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Napa Valley Apr 15-19</title>
+<style>
+  :root {
+    --wine: #722F37;
+    --wine-light: #9B4D55;
+    --gold: #C4A35A;
+    --green: #2D8A4E;
+    --orange: #D4840A;
+    --red: #C0392B;
+    --bg: #FAF8F5;
+    --card: #FFFFFF;
+    --text: #2C2C2C;
+    --muted: #888;
+    --border: #E8E4DF;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 0 0 100px 0;
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    background: linear-gradient(135deg, var(--wine), var(--wine-light));
+    color: white;
+    padding: 48px 20px 24px;
+    text-align: center;
+  }
+  header h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+  header p { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+  .quick-ref {
+    margin: 16px;
+    background: var(--card);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .quick-ref h2 { font-size: 14px; color: var(--wine); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .quick-ref-item { font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .quick-ref-item:last-child { border-bottom: none; }
+  .quick-ref-item a { color: var(--wine); text-decoration: none; font-weight: 600; }
+  .quick-ref-item .label { color: var(--muted); }
+  .day-card {
+    margin: 16px;
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .day-header {
+    padding: 16px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .day-header:active { background: #f5f0eb; }
+  .day-title { font-size: 15px; font-weight: 700; }
+  .day-subtitle { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .day-chevron { font-size: 18px; color: var(--muted); transition: transform 0.2s; }
+  .day-card.open .day-chevron { transform: rotate(180deg); }
+  .day-body { display: none; padding: 0 16px 16px; }
+  .day-card.open .day-body { display: block; }
+  .day-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .tag-drive { background: #EBF0F5; color: #3B6B9E; }
+  .tag-driver { background: #F5EBF5; color: #8E3B8E; }
+  .tag-walk { background: #EBF5EB; color: var(--green); }
+  .item {
+    display: flex;
+    align-items: flex-start;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 10px;
+  }
+  .item:last-child { border-bottom: none; }
+  .item input[type="checkbox"] {
+    margin-top: 3px;
+    width: 20px;
+    height: 20px;
+    accent-color: var(--wine);
+    flex-shrink: 0;
+  }
+  .item-content { flex: 1; min-width: 0; }
+  .item-time { font-size: 12px; font-weight: 700; color: var(--wine); }
+  .item-name { font-size: 14px; font-weight: 600; margin-top: 1px; }
+  .item-name a { color: inherit; text-decoration: none; border-bottom: 1px dashed var(--border); }
+  .item-detail { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: 4px;
+  }
+  .badge-booked { background: #E8F5E9; color: var(--green); }
+  .badge-walkin { background: #FFF3E0; color: var(--orange); }
+  .badge-todo { background: #FFEBEE; color: var(--red); }
+  .travel-sep {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .travel-sep::before, .travel-sep::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--wine-light);
+    padding: 12px 0 4px;
+  }
+  .progress-bar {
+    height: 3px;
+    background: rgba(255,255,255,0.2);
+    margin-top: 12px;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--gold);
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>NAPA VALLEY</h1>
+  <p>Jugal & Rupali &middot; April 15&ndash;19, 2026</p>
+  <div class="progress-bar"><div class="progress-fill" id="progress" style="width:0%"></div></div>
+</header>
+
+<!-- QUICK REFERENCE -->
+<div class="quick-ref">
+  <h2>Quick Reference</h2>
+  <div class="quick-ref-item"><span>Westin Verasa (Wed)</span><a href="https://maps.apple.com/?q=Westin+Verasa+Napa">Map</a></div>
+  <div class="quick-ref-item"><span>Bardessono (Thu-Sun)</span><a href="https://maps.apple.com/?q=Bardessono+Hotel+Yountville">Map</a></div>
+  <div class="quick-ref-item"><span>Bardessono Concierge</span><a href="tel:7072046000">707-204-6000</a></div>
+  <div class="quick-ref-item"><span class="label">Still needs booking:</span></div>
+  <div class="quick-ref-item"><span>Odette Estate (Thu)</span><span class="badge badge-todo">NOT BOOKED</span></div>
+  <div class="quick-ref-item"><span>Muir Woods parking</span><span class="badge badge-todo">BOOK NOW</span></div>
+</div>
+
+<!-- DAY PLACEHOLDERS -->
+<div id="day-wed">
+<div class="day-card">
+  <div class="day-header" onclick="toggleDay(this)">
+    <div>
+      <div class="day-title">Wed Apr 15 <span class="day-tag tag-drive">DRIVE</span></div>
+      <div class="day-subtitle">Arrival & Downtown Napa</div>
+    </div>
+    <div class="day-chevron">&#9662;</div>
+  </div>
+  <div class="day-body">
+    <div class="item">
+      <input type="checkbox" id="w1">
+      <div class="item-content">
+        <div class="item-time">3:00 PM</div>
+        <div class="item-name">Land SFO</div>
+        <div class="item-detail">Deplane, bags, Turo rental car pickup</div>
+      </div>
+    </div>
+    <div class="travel-sep">1 hr 10 min drive to Napa</div>
+    <div class="item">
+      <input type="checkbox" id="w2">
+      <div class="item-content">
+        <div class="item-time">6:30 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Westin+Verasa+Napa">Westin Verasa Napa</a></div>
+        <div class="item-detail">Check in, freshen up</div>
+      </div>
+    </div>
+    <div class="travel-sep">5 min walk</div>
+    <div class="item">
+      <input type="checkbox" id="w3">
+      <div class="item-content">
+        <div class="item-time">7:30 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Oxbow+Public+Market+Napa">Oxbow Public Market</a></div>
+        <div class="item-detail">Browse, grab a snack</div>
+      </div>
+    </div>
+    <div class="travel-sep">15 min walk</div>
+    <div class="item">
+      <input type="checkbox" id="w4">
+      <div class="item-content">
+        <div class="item-time">8:15 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Morimoto+Napa">Morimoto</a></div>
+        <div class="item-detail">Dinner reservation</div>
+        <div><span class="badge badge-booked">BOOKED 8:15 PM &middot; OpenTable</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">15 min walk back to Westin</div>
+  </div>
+</div>
+</div>
+<div id="day-thu">
+<div class="day-card">
+  <div class="day-header" onclick="toggleDay(this)">
+    <div>
+      <div class="day-title">Thu Apr 16 <span class="day-tag tag-drive">DRIVE</span></div>
+      <div class="day-subtitle">Southern Napa &rarr; Yountville</div>
+    </div>
+    <div class="day-chevron">&#9662;</div>
+  </div>
+  <div class="day-body">
+    <div class="item">
+      <input type="checkbox" id="t1">
+      <div class="item-content">
+        <div class="item-time">10:15 AM</div>
+        <div class="item-name">Leave Westin Verasa</div>
+      </div>
+    </div>
+    <div class="travel-sep">15 min drive south</div>
+    <div class="item">
+      <input type="checkbox" id="t2">
+      <div class="item-content">
+        <div class="item-time">10:30 AM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Domaine+Carneros+Napa">Domaine Carneros</a></div>
+        <div class="item-detail">Salon des R&ecirc;ves &mdash; sparkling + oysters ($99/pp)</div>
+        <div><span class="badge badge-booked">BOOKED 10:30 AM &middot; Tock (non-refundable)</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">20 min north on Silverado Trail</div>
+    <div class="item">
+      <input type="checkbox" id="t3">
+      <div class="item-content">
+        <div class="item-time">12:20 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Odette+Estate+Winery+Napa">Odette Estate</a></div>
+        <div class="item-detail">Stags Leap Cab + cheese pairings</div>
+        <div><span class="badge badge-todo">NOT BOOKED &middot; Accepts walk-ins</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">8 min drive west</div>
+    <div class="item">
+      <input type="checkbox" id="t4">
+      <div class="item-content">
+        <div class="item-time">2:10 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Bardessono+Hotel+Yountville">Bardessono Hotel</a></div>
+        <div class="item-detail">Check in, explore Yountville</div>
+      </div>
+    </div>
+    <div class="travel-sep">4 min walk</div>
+    <div class="item">
+      <input type="checkbox" id="t5">
+      <div class="item-content">
+        <div class="item-time">7:00 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Ad+Hoc+Yountville">Ad Hoc</a></div>
+        <div class="item-detail">Thomas Keller family-style set menu</div>
+        <div><span class="badge badge-booked">BOOKED 7:00 PM &middot; Resy</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">4 min walk back to Bardessono</div>
+  </div>
+</div>
+</div>
+<div id="day-fri">
+<div class="day-card">
+  <div class="day-header" onclick="toggleDay(this)">
+    <div>
+      <div class="day-title">Fri Apr 17 <span class="day-tag tag-driver">PRIVATE DRIVER</span></div>
+      <div class="day-subtitle">Rutherford &rarr; Calistoga &rarr; St. Helena</div>
+    </div>
+    <div class="day-chevron">&#9662;</div>
+  </div>
+  <div class="day-body">
+    <div class="item">
+      <input type="checkbox" id="f1">
+      <div class="item-content">
+        <div class="item-time">10:30 AM</div>
+        <div class="item-name">Driver picks up at Bardessono</div>
+      </div>
+    </div>
+    <div class="travel-sep">12 min north on Hwy 29</div>
+    <div class="item">
+      <input type="checkbox" id="f2">
+      <div class="item-content">
+        <div class="item-time">10:45 AM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Cakebread+Cellars+Rutherford">Cakebread Cellars</a></div>
+        <div class="item-detail">Food & wine pairing, Rutherford</div>
+        <div><span class="badge badge-booked">BOOKED 10:45 AM &middot; Tock</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">12 min north</div>
+    <div class="item">
+      <input type="checkbox" id="f3">
+      <div class="item-content">
+        <div class="item-time">12:15 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Auberge+du+Soleil+Rutherford">Auberge du Soleil</a></div>
+        <div class="item-detail">Michelin lunch on the terrace</div>
+        <div><span class="badge badge-booked">BOOKED 12:15 PM &middot; Tock</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">20 min north to Calistoga</div>
+    <div class="item">
+      <input type="checkbox" id="f4">
+      <div class="item-content">
+        <div class="item-time">2:45 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Sterling+Vineyards+Calistoga">Sterling Vineyards</a></div>
+        <div class="item-detail">Gondola to hilltop, panoramic views, 5 tastings</div>
+        <div><span class="badge badge-booked">BOOKED 2:45 PM &middot; Tock</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">15 min south to St. Helena</div>
+    <div class="item">
+      <input type="checkbox" id="f5">
+      <div class="item-content">
+        <div class="item-time">4:45 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Main+Street+St+Helena+CA">Main Street St. Helena</a></div>
+        <div class="item-detail">Stroll boutiques, Hartford House, coffee</div>
+      </div>
+    </div>
+    <div class="travel-sep">8 min walk</div>
+    <div class="item">
+      <input type="checkbox" id="f6">
+      <div class="item-content">
+        <div class="item-time">6:45 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Charter+Oak+St+Helena">Charter Oak</a></div>
+        <div class="item-detail">Cheeseburger, garden veg, pork jowl skewers</div>
+        <div><span class="badge badge-booked">BOOKED 6:45 PM &middot; Resy</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">18 min south on Hwy 29 &rarr; Bardessono ~9:05 PM</div>
+  </div>
+</div>
+</div>
+<div id="day-sat">
+<div class="day-card">
+  <div class="day-header" onclick="toggleDay(this)">
+    <div>
+      <div class="day-title">Sat Apr 18 <span class="day-tag tag-walk">ALL WALKABLE</span></div>
+      <div class="day-subtitle">Yountville Local Day + Spa</div>
+    </div>
+    <div class="day-chevron">&#9662;</div>
+  </div>
+  <div class="day-body">
+    <div class="item">
+      <input type="checkbox" id="s1">
+      <div class="item-content">
+        <div class="item-time">11:00 AM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Stewart+Cellars+Yountville">Stewart Cellars</a></div>
+        <div class="item-detail">NOMAD Cab, Cab Library (4.9 stars)</div>
+        <div><span class="badge badge-booked">BOOKED 11:00 AM &middot; Tock</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">2 min walk</div>
+    <div class="item">
+      <input type="checkbox" id="s2">
+      <div class="item-content">
+        <div class="item-time">12:35 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Lucy+Restaurant+Yountville">Lucy at Bardessono</a></div>
+        <div class="item-detail">Farm-to-fork California, organic garden ingredients</div>
+        <div><span class="badge badge-walkin">WALK-IN / Ask concierge</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">3 min walk</div>
+    <div class="item">
+      <input type="checkbox" id="s3">
+      <div class="item-content">
+        <div class="item-time">1:50 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Priest+Ranch+Yountville">Priest Ranch</a></div>
+        <div class="item-detail">Somerston Estate wines, rooftop terrace, cheese & chocolate pairings. Open 12&ndash;7 PM.</div>
+        <div><span class="badge badge-walkin">WALK-IN FRIENDLY</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">3 min walk back to Bardessono</div>
+    <div class="item">
+      <input type="checkbox" id="s4">
+      <div class="item-content">
+        <div class="item-time">3:30 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Bardessono+Hotel+Yountville">Bardessono B Spa</a></div>
+        <div class="item-detail">Yountville Signature Experience</div>
+        <div><span class="badge badge-walkin">BOOK AT CHECK-IN &middot; 707-204-6000</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">2 min walk</div>
+    <div class="item">
+      <input type="checkbox" id="s5">
+      <div class="item-content">
+        <div class="item-time">5:15 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Clementine+Yountville">Clementine</a></div>
+        <div class="item-detail">Pre-dinner cocktails & light bites</div>
+      </div>
+    </div>
+    <div class="travel-sep">1 min walk</div>
+    <div class="item">
+      <input type="checkbox" id="s6">
+      <div class="item-content">
+        <div class="item-time">7:00 PM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Bottega+Napa+Valley+Yountville">Bottega Napa Valley</a></div>
+        <div class="item-detail">Italian &mdash; short ribs, lobster risotto</div>
+        <div><span class="badge badge-booked">BOOKED 7:45 PM &middot; OpenTable</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">2 min walk back to Bardessono</div>
+  </div>
+</div>
+</div>
+<div id="day-sun">
+<div class="day-card">
+  <div class="day-header" onclick="toggleDay(this)">
+    <div>
+      <div class="day-title">Sun Apr 19 <span class="day-tag tag-drive">DRIVE</span></div>
+      <div class="day-subtitle">Muir Woods & Departure</div>
+    </div>
+    <div class="day-chevron">&#9662;</div>
+  </div>
+  <div class="day-body">
+    <div class="item">
+      <input type="checkbox" id="u1">
+      <div class="item-content">
+        <div class="item-time">7:30 AM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Bouchon+Bakery+Yountville">Bouchon Bakery</a></div>
+        <div class="item-detail">Pastries & coffee for the road</div>
+      </div>
+    </div>
+    <div class="item">
+      <input type="checkbox" id="u2">
+      <div class="item-content">
+        <div class="item-time">8:00 AM</div>
+        <div class="item-name">Check out of Bardessono</div>
+      </div>
+    </div>
+    <div class="travel-sep">1 hr 15 min via Hwy 29 S &rarr; 121 &rarr; 101 S</div>
+    <div class="item">
+      <input type="checkbox" id="u3">
+      <div class="item-content">
+        <div class="item-time">9:30 AM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=Muir+Woods+National+Monument">Muir Woods</a></div>
+        <div class="item-detail">Reserved 9:30 AM parking ($10). Creek Trail (~1 hr)</div>
+        <div><span class="badge badge-todo">BOOK PARKING &middot; gomuirwoods.com</span></div>
+      </div>
+    </div>
+    <div class="travel-sep">35 min via 101 S &rarr; 380</div>
+    <div class="item">
+      <input type="checkbox" id="u4">
+      <div class="item-content">
+        <div class="item-time">11:35 AM</div>
+        <div class="item-name"><a href="https://maps.apple.com/?q=San+Francisco+International+Airport">Arrive SFO</a></div>
+        <div class="item-detail">Drop rental car, lunch at terminal</div>
+      </div>
+    </div>
+    <div class="item">
+      <input type="checkbox" id="u5">
+      <div class="item-content">
+        <div class="item-time">6:25 PM</div>
+        <div class="item-name">Flight departs</div>
+        <div class="item-detail">Big buffer &mdash; arrive ~5 hrs early</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+function toggleDay(el) {
+  el.closest('.day-card').classList.toggle('open');
+}
+function saveState() {
+  const checks = {};
+  document.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    checks[cb.id] = cb.checked;
+  });
+  localStorage.setItem('napa-itinerary', JSON.stringify(checks));
+  updateProgress();
+}
+function loadState() {
+  try {
+    const checks = JSON.parse(localStorage.getItem('napa-itinerary') || '{}');
+    Object.keys(checks).forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.checked = checks[id];
+    });
+  } catch(e) {}
+  updateProgress();
+}
+function updateProgress() {
+  const all = document.querySelectorAll('input[type=checkbox]');
+  const checked = document.querySelectorAll('input[type=checkbox]:checked');
+  const pct = all.length ? Math.round((checked.length / all.length) * 100) : 0;
+  document.getElementById('progress').style.width = pct + '%';
+}
+document.addEventListener('change', saveState);
+document.addEventListener('DOMContentLoaded', () => {
+  // Auto-open today's card
+  const today = new Date().toISOString().slice(0,10);
+  const dayMap = {'2026-04-15':'day-wed','2026-04-16':'day-thu','2026-04-17':'day-fri','2026-04-18':'day-sat','2026-04-19':'day-sun'};
+  const target = dayMap[today];
+  if (target) {
+    const card = document.querySelector('#' + target + ' .day-card');
+    if (card) card.classList.add('open');
+  } else {
+    // If not during trip, open first day
+    const first = document.querySelector('.day-card');
+    if (first) first.classList.add('open');
+  }
+  loadState();
+});
+</script>
+
+</body>
+</html>
